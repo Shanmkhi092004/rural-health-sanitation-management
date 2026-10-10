@@ -1,4 +1,4 @@
-package com.Team14;
+package com.team14;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
