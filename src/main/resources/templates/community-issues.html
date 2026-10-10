@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+
+<head th:replace="~{fragments/layout :: head('Community Issues')}"></head>
+
+<body>
+
+    <div class="app-container">
+        <!-- Reusable Sidebar -->
+        <aside th:replace="~{fragments/layout :: sidebar('community-issues')}"></aside>
+
+        <!-- Main Content Area -->
+        <main class="app-main">
+            <header
+                th:replace="~{fragments/layout :: header('Community Issues', 'Village Sanitation Grievances & Water Pipeline Tickets')}">
+            </header>
+
+            <div class="content-wrapper">
+                <!-- Page Toolbar -->
+                <div class="page-toolbar">
+                    <div class="search-box">
+                        <svg class="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <input type="text" id="issueSearch" placeholder="Search by title, village, team..."
+                            onkeyup="filterIssues()">
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-primary" onclick="openAddIssueModal()">
+                            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 4v16m8-8H4" />
+                            </svg>
+                            Report New Issue
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Status Filter Pills -->
+                <div class="filter-pills" style="margin-bottom: 1.25rem;">
+                    <button type="button" class="filter-pill active" onclick="setStatusFilter('ALL', this)">All
+                        Tickets</button>
+                    <button type="button" class="filter-pill" onclick="setStatusFilter('OPEN', this)">Open</button>
+                    <button type="button" class="filter-pill"
+                        onclick="setStatusFilter('ASSIGNED', this)">Assigned</button>
+                    <button type="button" class="filter-pill" onclick="setStatusFilter('IN_PROGRESS', this)">In
+                        Progress</button>
+                    <button type="button" class="filter-pill"
+                        onclick="setStatusFilter('RESOLVED', this)">Resolved</button>
+                </div>
+
+                <!-- Issues Table -->
+                <div class="table-container" th:if="${issues != null and !issues.isEmpty()}">
+                    <table class="data-table" id="issuesTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 70px;">Ticket</th>
+                                <th>Category</th>
+                                <th>Priority</th>
+                                <th>Issue Title &amp; Details</th>
+                                <th>Village</th>
+                                <th>Status</th>
+                                <th>Assigned Team</th>
+                                <th>Reported By</th>
+                                <th style="text-align: right; width: 230px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="iss : ${issues}" th:id="'issue-row-' + ${iss.id}"
+                                th:data-status="${iss.status}">
+                                <td class="iss-id" th:text="'#' + ${iss.id}">#1</td>
+                                <td class="iss-cat">
+                                    <span class="badge"
+                                        th:classappend="${iss.category == 'WATER' ? 'badge-cat-water' : 'badge-cat-sanitation'}"
+                                        th:text="${iss.category}">SANITATION</span>
+                                </td>
+                                <td class="iss-priority">
+                                    <span class="badge"
+                                        th:classappend="${iss.priority == 'URGENT' ? 'badge-priority-urgent' : (iss.priority == 'HIGH' ? 'badge-priority-high' : (iss.priority == 'MEDIUM' ? 'badge-priority-medium' : 'badge-priority-low'))}"
+                                        th:text="${iss.priority}">MEDIUM</span>
+                                </td>
+                                <td class="iss-info">
+                                    <strong th:text="${iss.title}"
+                                        style="display: block; color: var(--slate-900);">Broken drainage pipe</strong>
+                                    <span
+                                        style="font-size: 0.78rem; color: var(--slate-500); display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;"
+                                        th:text="${iss.description}">Overflowing near school</span>
+                                </td>
+                                <td class="iss-village" th:text="${iss.village}">Sundarpur</td>
+                                <td class="iss-status">
+                                    <span class="badge"
+                                        th:classappend="${iss.status == 'RESOLVED' ? 'badge-success' : (iss.status == 'IN_PROGRESS' ? 'badge-info' : (iss.status == 'ASSIGNED' ? 'badge-warning' : 'badge-danger'))}"
+                                        th:text="${iss.status}">OPEN</span>
+                                </td>
+                                <td class="iss-team">
+                                    <span th:if="${iss.assignedTeam != null and !iss.assignedTeam.isEmpty()}"
+                                        style="font-weight: 600;" th:text="${iss.assignedTeam}">Sanitation Squad
+                                        1</span>
+                                    <span th:if="${iss.assignedTeam == null or iss.assignedTeam.isEmpty()}"
+                                        style="color: var(--slate-400); font-style: italic;">Unassigned</span>
+                                </td>
+                                <td class="iss-reporter" style="font-size: 0.8rem;"
+                                    th:text="${iss.reportedBy != null and !iss.reportedBy.isEmpty() ? iss.reportedBy : 'Resident'}">
+                                    Panchayat Head</td>
+                                <td style="text-align: right;">
+                                    <div class="table-actions" style="justify-content: flex-end;">
+                                        <button type="button" class="btn btn-secondary btn-sm" th:data-id="${iss.id}"
+                                            th:data-title="${iss.title}"
+                                            onclick="openHistoryModal(this)">History</button>
+
+                                        <!-- If not resolved, allow assignment -->
+                                        <button type="button" class="btn btn-secondary btn-sm"
+                                            th:if="${iss.status != 'RESOLVED'}" th:data-id="${iss.id}"
+                                            th:data-title="${iss.title}" th:data-team="${iss.assignedTeam}"
+                                            onclick="openAssignModal(this)">Assign</button>
+
+                                        <!-- If assigned or in progress, allow progress -->
+                                        <button type="button" class="btn btn-primary btn-sm"
+                                            th:if="${iss.status != 'RESOLVED'}" th:data-id="${iss.id}"
+                                            th:data-status="${iss.status}" th:data-team="${iss.assignedTeam}"
+                                            onclick="openStatusModal(this)">Progress</button>
+
+                                        <span th:if="${iss.status == 'RESOLVED'}"
+                                            style="color: var(--success); font-weight: 600; font-size: 0.75rem;">Resolved</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Empty State when table has no records -->
+                <div class="empty-state" id="emptyState" th:if="${issues == null or issues.isEmpty()}">
+                    <svg class="empty-state-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <h3>No Community Issues Logged</h3>
+                    <p>Report sanitation hazards, clogged community drains, or drinking water supply disruptions.</p>
+                    <button type="button" class="btn btn-primary" onclick="openAddIssueModal()">Report First
+                        Issue</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 
+     Modal 1: Report Issue
+      -->
+    <div class="modal-overlay" id="addIssueModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 class="modal-title">Report Community Issue</h3>
+                <button type="button" class="modal-close" onclick="closeModal('addIssueModal')">&times;</button>
+            </div>
+            <form id="addIssueForm" onsubmit="handleAddIssue(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label" for="issueTitle">Issue Title *</label>
+                        <input type="text" id="issueTitle" class="form-control"
+                            placeholder="e.g. Clogged public drain causing stagnation" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="issueCategory">Category *</label>
+                            <select id="issueCategory" class="form-select" required>
+                                <option value="SANITATION">SANITATION</option>
+                                <option value="WATER">WATER</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="issuePriority">Priority *</label>
+                            <select id="issuePriority" class="form-select" required>
+                                <option value="MEDIUM">MEDIUM</option>
+                                <option value="LOW">LOW</option>
+                                <option value="HIGH">HIGH</option>
+                                <option value="URGENT">URGENT</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="issueVillage">Village *</label>
+                            <input type="text" id="issueVillage" class="form-control" placeholder="e.g. Sundarpur"
+                                required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="issueReporter">Reported By</label>
+                            <input type="text" id="issueReporter" class="form-control"
+                                placeholder="e.g. Ward Representative">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="issueDesc">Description &amp; Location Details *</label>
+                        <textarea id="issueDesc" class="form-control" rows="3"
+                            placeholder="Provide accurate details about the problem and location..."
+                            required></textarea>
+                    </div>
+
+                    <div id="addIssueErrorMsg"
+                        style="color: var(--danger); font-size: 0.8rem; margin-top: 0.5rem; display: none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="closeModal('addIssueModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="addIssueSubmitBtn">Submit Ticket</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 
+     Modal 2: Assign Team
+     -->
+    <div class="modal-overlay" id="assignIssueModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 class="modal-title">Assign Response Team</h3>
+                <button type="button" class="modal-close" onclick="closeModal('assignIssueModal')">&times;</button>
+            </div>
+            <form id="assignIssueForm" onsubmit="handleAssignIssue(event)">
+                <input type="hidden" id="assignIssueId">
+                <div class="modal-body">
+                    <p style="font-size: 0.85rem; color: var(--slate-600); margin-bottom: 1rem;">
+                        Issue: <strong id="assignIssueTitle" style="color: var(--slate-900);">Drainage failure</strong>
+                    </p>
+
+                    <div class="form-group">
+                        <label class="form-label" for="assignTeam">Assigned Team / Department *</label>
+                        <input type="text" id="assignTeam" class="form-control"
+                            placeholder="e.g. Block Sanitation Team Alpha" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="assignChangedBy">Assigned By (Officer Name)</label>
+                        <input type="text" id="assignChangedBy" class="form-control"
+                            placeholder="e.g. Sanitation Officer Patel">
+                    </div>
+
+                    <div id="assignErrorMsg"
+                        style="color: var(--danger); font-size: 0.8rem; margin-top: 0.5rem; display: none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="closeModal('assignIssueModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="assignSubmitBtn">Confirm Assignment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!--
+     Modal 3: Progress Status
+     -->
+    <div class="modal-overlay" id="statusIssueModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 class="modal-title">Advance Ticket Workflow</h3>
+                <button type="button" class="modal-close" onclick="closeModal('statusIssueModal')">&times;</button>
+            </div>
+            <form id="statusIssueForm" onsubmit="handleUpdateStatus(event)">
+                <input type="hidden" id="statusIssueId">
+                <div class="modal-body">
+                    <p style="font-size: 0.85rem; color: var(--slate-600); margin-bottom: 1rem;">
+                        Current Status: <strong id="currentStatusDisplay" class="badge badge-info">ASSIGNED</strong>
+                    </p>
+
+                    <div class="form-group">
+                        <label class="form-label" for="targetStatus">Next Status *</label>
+                        <select id="targetStatus" class="form-select" required>
+                            <!-- Populated dynamically based on workflow constraints -->
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="statusOfficer">Updated By (Name)</label>
+                        <input type="text" id="statusOfficer" class="form-control" placeholder="e.g. Site Engineer">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="statusNote">Progress Note / Resolution Summary</label>
+                        <textarea id="statusNote" class="form-control" rows="2"
+                            placeholder="e.g. Cleared 15m blockage and restored flow."></textarea>
+                    </div>
+
+                    <div id="statusErrorMsg"
+                        style="color: var(--danger); font-size: 0.8rem; margin-top: 0.5rem; display: none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="closeModal('statusIssueModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="statusSubmitBtn">Update Status</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 
+     Modal 4: View History Timeline
+     -->
+    <div class="modal-overlay" id="historyModal">
+        <div class="modal-dialog" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="historyModalTitle">Issue Audit Trail</h3>
+                <button type="button" class="modal-close" onclick="closeModal('historyModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="historyLoading" style="text-align: center; padding: 2rem; color: var(--slate-500);">
+                    Loading history events...
+                </div>
+                <div class="timeline" id="historyTimeline" style="display: none;">
+                    <!-- Populated dynamically via JS -->
+                </div>
+                <div id="historyEmpty" class="empty-state" style="display: none; padding: 2rem 1rem;">
+                    <p>No transition events recorded.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('historyModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Layout Scripts -->
+    <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+
+    <script>
+        let currentStatusFilter = 'ALL';
+
+        function openAddIssueModal() {
+            document.getElementById('addIssueForm').reset();
+            document.getElementById('addIssueErrorMsg').style.display = 'none';
+            document.getElementById('addIssueModal').classList.add('active');
+        }
+
+        function openAssignModal(button) {
+            const id = button.getAttribute('data-id');
+            const title = button.getAttribute('data-title');
+            const team = button.getAttribute('data-team') || '';
+
+            document.getElementById('assignIssueId').value = id;
+            document.getElementById('assignIssueTitle').textContent = '#' + id + ' ' + title;
+            document.getElementById('assignTeam').value = team;
+            document.getElementById('assignErrorMsg').style.display = 'none';
+            document.getElementById('assignIssueModal').classList.add('active');
+        }
+
+        function openStatusModal(button) {
+            const id = button.getAttribute('data-id');
+            const status = button.getAttribute('data-status');
+            const team = button.getAttribute('data-team') || '';
+
+            document.getElementById('statusIssueId').value = id;
+            document.getElementById('currentStatusDisplay').textContent = status;
+            document.getElementById('statusErrorMsg').style.display = 'none';
+
+            const select = document.getElementById('targetStatus');
+            select.innerHTML = '';
+
+            // Enforce team's backend workflow: OPEN -> ASSIGNED -> IN_PROGRESS -> RESOLVED
+            if (status === 'OPEN') {
+                if (!team) {
+                    alert('Please assign a response team first before starting work.');
+                    openAssignModal(button);
+                    return;
+                }
+                select.innerHTML = '<option value="ASSIGNED">ASSIGNED</option><option value="IN_PROGRESS">IN_PROGRESS</option>';
+            } else if (status === 'ASSIGNED') {
+                select.innerHTML = '<option value="IN_PROGRESS">IN_PROGRESS</option>';
+            } else if (status === 'IN_PROGRESS') {
+                select.innerHTML = '<option value="RESOLVED">RESOLVED</option>';
+            }
+
+            document.getElementById('statusIssueModal').classList.add('active');
+        }
+
+        async function openHistoryModal(button) {
+            const id = button.getAttribute('data-id');
+            const title = button.getAttribute('data-title');
+
+            document.getElementById('historyModalTitle').textContent = 'Audit Trail: #' + id + ' ' + title;
+            document.getElementById('historyLoading').style.display = 'block';
+            document.getElementById('historyTimeline').style.display = 'none';
+            document.getElementById('historyEmpty').style.display = 'none';
+            document.getElementById('historyModal').classList.add('active');
+
+            try {
+                const response = await fetch('/api/issues/' + id + '/history');
+                if (response.ok) {
+                    const history = await response.json();
+                    document.getElementById('historyLoading').style.display = 'none';
+
+                    if (history && history.length > 0) {
+                        const timeline = document.getElementById('historyTimeline');
+                        timeline.innerHTML = '';
+                        history.forEach(item => {
+                            const el = document.createElement('div');
+                            el.className = 'timeline-item';
+                            el.innerHTML = `
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-meta">
+                                <strong>Status: ${escapeHtml(item.newStatus || 'UPDATED')}</strong>
+                                <span>${item.changedAt ? new Date(item.changedAt).toLocaleString() : ''}</span>
+                            </div>
+                            <p style="font-size: 0.85rem; color: var(--slate-700);">${escapeHtml(item.note || 'No notes')}</p>
+                            <div style="font-size: 0.75rem; color: var(--slate-500); margin-top: 0.25rem;">
+                                Changed by: ${escapeHtml(item.changedBy || 'Demo User')} ${item.assignedTeam ? '| Team: ' + escapeHtml(item.assignedTeam) : ''}
+                            </div>
+                        </div>
+                    `;
+                            timeline.appendChild(el);
+                        });
+                        document.getElementById('historyTimeline').style.display = 'flex';
+                    } else {
+                        document.getElementById('historyEmpty').style.display = 'block';
+                    }
+                }
+            } catch (err) {
+                document.getElementById('historyLoading').textContent = 'Failed to load history.';
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function setStatusFilter(status, button) {
+            currentStatusFilter = status;
+            document.querySelectorAll('.filter-pill').forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            filterIssues();
+        }
+
+        function filterIssues() {
+            const query = document.getElementById('issueSearch').value.toLowerCase();
+            const rows = document.querySelectorAll('#issuesTable tbody tr');
+
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                const rowStatus = row.getAttribute('data-status');
+                const matchesQuery = text.includes(query);
+                const matchesStatus = (currentStatusFilter === 'ALL' || rowStatus === currentStatusFilter);
+
+                row.style.display = (matchesQuery && matchesStatus) ? '' : 'none';
+            });
+        }
+
+        // Handle Add Issue
+        async function handleAddIssue(event) {
+            event.preventDefault();
+            const submitBtn = document.getElementById('addIssueSubmitBtn');
+            const errorDiv = document.getElementById('addIssueErrorMsg');
+            errorDiv.style.display = 'none';
+
+            const issue = {
+                title: document.getElementById('issueTitle').value.trim(),
+                village: document.getElementById('issueVillage').value.trim(),
+                category: document.getElementById('issueCategory').value,
+                priority: document.getElementById('issuePriority').value,
+                description: document.getElementById('issueDesc').value.trim(),
+                reportedBy: document.getElementById('issueReporter').value.trim() || null
+            };
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+
+            try {
+                const response = await fetch('/api/issues', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(issue)
+                });
+
+                if (response.status === 201) {
+                    showToast('Community grievance ticket registered!', 'success');
+                    closeModal('addIssueModal');
+                    setTimeout(() => window.location.reload(), 400);
+                } else {
+                    const errorData = await response.json().catch(() => null);
+                    errorDiv.textContent = errorData?.error || errorData?.message || 'Failed to report issue.';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Server communication error.';
+                errorDiv.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Ticket';
+            }
+        }
+
+        // Handle Assign Issue
+        async function handleAssignIssue(event) {
+            event.preventDefault();
+            const id = document.getElementById('assignIssueId').value;
+            const submitBtn = document.getElementById('assignSubmitBtn');
+            const errorDiv = document.getElementById('assignErrorMsg');
+            errorDiv.style.display = 'none';
+
+            const req = {
+                assignedTeam: document.getElementById('assignTeam').value.trim(),
+                changedBy: document.getElementById('assignChangedBy').value.trim() || 'Officer'
+            };
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Assigning...';
+
+            try {
+                const response = await fetch('/api/issues/' + id + '/assign', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(req)
+                });
+
+                if (response.ok) {
+                    showToast('Response team assigned!', 'success');
+                    closeModal('assignIssueModal');
+                    setTimeout(() => window.location.reload(), 400);
+                } else {
+                    const errorData = await response.json().catch(() => null);
+                    errorDiv.textContent = errorData?.error || 'Assignment failed.';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Server communication error.';
+                errorDiv.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Confirm Assignment';
+            }
+        }
+
+        // Handle Update Status
+        async function handleUpdateStatus(event) {
+            event.preventDefault();
+            const id = document.getElementById('statusIssueId').value;
+            const submitBtn = document.getElementById('statusSubmitBtn');
+            const errorDiv = document.getElementById('statusErrorMsg');
+            errorDiv.style.display = 'none';
+
+            const req = {
+                status: document.getElementById('targetStatus').value,
+                changedBy: document.getElementById('statusOfficer').value.trim() || 'Officer',
+                note: document.getElementById('statusNote').value.trim() || 'Status changed'
+            };
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Updating...';
+
+            try {
+                const response = await fetch('/api/issues/' + id + '/status', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(req)
+                });
+
+                if (response.ok) {
+                    showToast('Ticket advanced to ' + req.status + '!', 'success');
+                    closeModal('statusIssueModal');
+                    setTimeout(() => window.location.reload(), 400);
+                } else {
+                    const errorData = await response.json().catch(() => null);
+                    errorDiv.textContent = errorData?.error || 'Status update rejected by state-machine.';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Server communication error.';
+                errorDiv.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Update Status';
+            }
+        }
+    </script>
+
+</body>
+
+</html>

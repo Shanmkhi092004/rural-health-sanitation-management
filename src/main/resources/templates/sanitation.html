@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+
+<head th:replace="~{fragments/layout :: head('Sanitation Facilities')}"></head>
+
+<body>
+
+    <div class="app-container">
+        <!-- Reusable Sidebar -->
+        <aside th:replace="~{fragments/layout :: sidebar('sanitation')}"></aside>
+
+        <!-- Main Content Area -->
+        <main class="app-main">
+            <header
+                th:replace="~{fragments/layout :: header('Sanitation Facilities & Hygiene', 'Infrastructure tracking, cleanliness ratings & maintenance oversight')}">
+            </header>
+
+            <div class="content-wrapper">
+                <!-- Stat Highlights -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <span class="stat-card-title">Total Facilities</span>
+                            <div class="stat-card-icon icon-emerald">
+                                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="stat-card-value" th:text="${facilities != null ? facilities.size() : 0}">0</div>
+                        <div class="stat-card-footer">
+                            <span>Registered assets</span>
+                            <span style="color: var(--primary-700); font-weight: 600;">Active</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <span class="stat-card-title">Good Condition</span>
+                            <div class="stat-card-icon icon-teal">
+                                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="stat-card-value" style="color: #059669;"
+                            th:text="${facilities != null ? facilities.?[conditionStatus == 'GOOD'].size() : 0}">0</div>
+                        <div class="stat-card-footer">
+                            <span>Operational</span>
+                            <span style="color: #059669; font-weight: 600;">Normal</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <span class="stat-card-title">Needs Attention</span>
+                            <div class="stat-card-icon icon-amber">
+                                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="stat-card-value" style="color: #c2410c;"
+                            th:text="${facilities != null ? (facilities.?[conditionStatus == 'NEEDS_REPAIR'].size() + facilities.?[conditionStatus == 'OUT_OF_ORDER'].size()) : 0}">
+                            0</div>
+                        <div class="stat-card-footer">
+                            <span>Repair / Out of order</span>
+                            <span
+                                th:if="${facilities != null and (!facilities.?[conditionStatus == 'NEEDS_REPAIR'].isEmpty() or !facilities.?[conditionStatus == 'OUT_OF_ORDER'].isEmpty())}"
+                                style="color: #c2410c; font-weight: 600;">Pending</span>
+                            <span
+                                th:if="${facilities == null or (facilities.?[conditionStatus == 'NEEDS_REPAIR'].isEmpty() and facilities.?[conditionStatus == 'OUT_OF_ORDER'].isEmpty())}"
+                                style="color: #15803d; font-weight: 600;">All Clear</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-card-header">
+                            <span class="stat-card-title">Clean Sanitation</span>
+                            <div class="stat-card-icon icon-blue">
+                                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="stat-card-value" style="color: #166534;"
+                            th:text="${facilities != null ? facilities.?[cleanlinessStatus == 'CLEAN'].size() : 0}">0
+                        </div>
+                        <div class="stat-card-footer">
+                            <span>Hygienic rating</span>
+                            <span style="color: #166534; font-weight: 600;">Verified</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Page Toolbar -->
+                <div class="page-toolbar">
+                    <div class="search-box">
+                        <svg class="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <input type="text" id="facilitySearch" placeholder="Search by name, village, type, location..."
+                            onkeyup="filterFacilities()">
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-primary" onclick="openAddFacilityModal()">
+                            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 4v16m8-8H4" />
+                            </svg>
+                            Register New Facility
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filter Pills -->
+                <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap;">
+                    <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                        <span
+                            style="font-size: 0.75rem; font-weight: 700; color: var(--slate-500); text-transform: uppercase;">Condition:</span>
+                        <button type="button" class="filter-pill active"
+                            onclick="setConditionFilter('ALL', this)">All</button>
+                        <button type="button" class="filter-pill"
+                            onclick="setConditionFilter('GOOD', this)">Good</button>
+                        <button type="button" class="filter-pill"
+                            onclick="setConditionFilter('NEEDS_REPAIR', this)">Needs Repair</button>
+                        <button type="button" class="filter-pill" onclick="setConditionFilter('OUT_OF_ORDER', this)">Out
+                            of Order</button>
+                    </div>
+
+                    <div style="width: 1px; height: 20px; background: var(--slate-300);"></div>
+
+                    <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+                        <span
+                            style="font-size: 0.75rem; font-weight: 700; color: var(--slate-500); text-transform: uppercase;">Cleanliness:</span>
+                        <button type="button" class="filter-pill active"
+                            onclick="setCleanlinessFilter('ALL', this)">All</button>
+                        <button type="button" class="filter-pill"
+                            onclick="setCleanlinessFilter('CLEAN', this)">Clean</button>
+                        <button type="button" class="filter-pill"
+                            onclick="setCleanlinessFilter('MODERATE', this)">Moderate</button>
+                        <button type="button" class="filter-pill"
+                            onclick="setCleanlinessFilter('DIRTY', this)">Dirty</button>
+                    </div>
+                </div>
+
+                <!-- Facilities Table -->
+                <div class="table-container">
+                    <table class="data-table" id="facilitiesTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 70px;">ID</th>
+                                <th>Facility Name</th>
+                                <th>Village &amp; Location</th>
+                                <th>Facility Type</th>
+                                <th>Condition Status</th>
+                                <th>Cleanliness</th>
+                                <th>Last Inspected</th>
+                                <th>Maintenance Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="fac : ${facilities}"
+                                th:attr="data-condition=${fac.conditionStatus},data-cleanliness=${fac.cleanlinessStatus}">
+                                <td style="font-weight: 600; color: var(--slate-500);" th:text="'#' + ${fac.id}">#1</td>
+                                <td>
+                                    <strong style="color: var(--slate-900);" th:text="${fac.facilityName}">Community
+                                        Toilet Complex</strong>
+                                </td>
+                                <td>
+                                    <div style="font-weight: 600; color: var(--slate-800);" th:text="${fac.village}">
+                                        Sundarpur</div>
+                                    <small style="color: var(--slate-500);"
+                                        th:text="${fac.location != null ? fac.location : 'Village Center'}">Near Primary
+                                        School</small>
+                                </td>
+                                <td>
+                                    <span class="facility-type-tag"
+                                        th:text="${fac.facilityType != null ? fac.facilityType : 'General Sanitation'}">
+                                        Public Latrine
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge"
+                                        th:classappend="${fac.conditionStatus == 'GOOD' ? 'badge-condition-good' : (fac.conditionStatus == 'NEEDS_REPAIR' ? 'badge-condition-repair' : 'badge-condition-broken')}"
+                                        th:text="${fac.conditionStatus}">
+                                        GOOD
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge"
+                                        th:classappend="${fac.cleanlinessStatus == 'CLEAN' ? 'badge-cleanliness-clean' : (fac.cleanlinessStatus == 'MODERATE' ? 'badge-cleanliness-moderate' : 'badge-cleanliness-dirty')}"
+                                        th:text="${fac.cleanlinessStatus}">
+                                        CLEAN
+                                    </span>
+                                </td>
+                                <td>
+                                    <span style="font-size: 0.82rem; color: var(--slate-600);"
+                                        th:text="${fac.lastInspectionDate != null ? #temporals.format(fac.lastInspectionDate, 'dd MMM yyyy') : 'Not inspected'}">
+                                        12 Oct 2026
+                                    </span>
+                                </td>
+                                <td style="max-width: 250px;">
+                                    <span
+                                        style="font-size: 0.82rem; color: var(--slate-600); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;"
+                                        th:text="${fac.maintenanceNotes != null && !fac.maintenanceNotes.isBlank() ? fac.maintenanceNotes : 'Routine operation'}">
+                                        Regular sanitization completed
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr th:if="${facilities == null || #lists.isEmpty(facilities)}" class="empty-row">
+                                <td colspan="8">
+                                    <div class="empty-state">
+                                        <div class="empty-state-icon">
+                                            <svg width="48" height="48" fill="none" viewBox="0 0 24 24"
+                                                stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                            </svg>
+                                        </div>
+                                        <h3>No Sanitation Facilities Found</h3>
+                                        <p>Begin logging village toilets, washing complexes, and sanitation
+                                            infrastructure assets.</p>
+                                        <button type="button" class="btn btn-primary"
+                                            onclick="openAddFacilityModal()">Register First Facility</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- 
+     Modal: Register Sanitation Facility
+      -->
+    <div class="modal-overlay" id="addFacilityModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 class="modal-title">Register Sanitation Facility</h3>
+                <button type="button" class="modal-close" onclick="closeModal('addFacilityModal')">&times;</button>
+            </div>
+            <form id="addFacilityForm" onsubmit="handleAddFacility(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label" for="facName">Facility Name *</label>
+                        <input type="text" id="facName" class="form-control"
+                            placeholder="e.g. Rampur Community Latrine Complex" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="facVillage">Village *</label>
+                            <input type="text" id="facVillage" class="form-control" placeholder="e.g. Rampur" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="facType">Facility Type</label>
+                            <select id="facType" class="form-select">
+                                <option value="Community Toilet Complex">Community Toilet Complex</option>
+                                <option value="School Sanitation Block">School Sanitation Block</option>
+                                <option value="Anganwadi Washroom">Anganwadi Washroom</option>
+                                <option value="Handwashing Station">Handwashing Station</option>
+                                <option value="Bio-Digester Toilet">Bio-Digester Toilet</option>
+                                <option value="Septic Tank Facility">Septic Tank Facility</option>
+                                <option value="Solid Waste Center">Solid Waste Center</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="facLocation">Location Details / Landmark</label>
+                        <input type="text" id="facLocation" class="form-control"
+                            placeholder="e.g. Near Panchayat Office, Ward No. 3">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="facCondition">Condition Status *</label>
+                            <select id="facCondition" class="form-select" required>
+                                <option value="GOOD">GOOD</option>
+                                <option value="NEEDS_REPAIR">NEEDS_REPAIR</option>
+                                <option value="OUT_OF_ORDER">OUT_OF_ORDER</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="facCleanliness">Cleanliness Status *</label>
+                            <select id="facCleanliness" class="form-select" required>
+                                <option value="CLEAN">CLEAN</option>
+                                <option value="MODERATE">MODERATE</option>
+                                <option value="DIRTY">DIRTY</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="facInspectionDate">Last Inspection Date</label>
+                        <input type="date" id="facInspectionDate" class="form-control">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="facNotes">Maintenance Notes</label>
+                        <textarea id="facNotes" class="form-control" rows="2"
+                            placeholder="e.g. Water tank filled, routine bleach disinfection performed."></textarea>
+                    </div>
+
+                    <div id="addFacErrorMsg"
+                        style="color: var(--danger); font-size: 0.8rem; margin-top: 0.5rem; display: none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="closeModal('addFacilityModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="addFacSubmitBtn">Save Facility</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Layout Scripts -->
+    <script th:src="@{/js/app.js}"></script>
+
+    <script>
+        let currentConditionFilter = 'ALL';
+        let currentCleanlinessFilter = 'ALL';
+
+        function openAddFacilityModal() {
+            document.getElementById('addFacilityForm').reset();
+            document.getElementById('facInspectionDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('addFacErrorMsg').style.display = 'none';
+            document.getElementById('addFacilityModal').classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function setConditionFilter(cond, button) {
+            currentConditionFilter = cond;
+            button.parentElement.querySelectorAll('.filter-pill').forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            filterFacilities();
+        }
+
+        function setCleanlinessFilter(clean, button) {
+            currentCleanlinessFilter = clean;
+            button.parentElement.querySelectorAll('.filter-pill').forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            filterFacilities();
+        }
+
+        function filterFacilities() {
+            const query = document.getElementById('facilitySearch').value.toLowerCase();
+            const rows = document.querySelectorAll('#facilitiesTable tbody tr:not(.empty-row)');
+
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                const rowCondition = row.getAttribute('data-condition');
+                const rowCleanliness = row.getAttribute('data-cleanliness');
+
+                const matchesQuery = text.includes(query);
+                const matchesCondition = (currentConditionFilter === 'ALL' || rowCondition === currentConditionFilter);
+                const matchesCleanliness = (currentCleanlinessFilter === 'ALL' || rowCleanliness === currentCleanlinessFilter);
+
+                row.style.display = (matchesQuery && matchesCondition && matchesCleanliness) ? '' : 'none';
+            });
+        }
+
+        // Handle Add Facility
+        async function handleAddFacility(event) {
+            event.preventDefault();
+            const submitBtn = document.getElementById('addFacSubmitBtn');
+            const errorDiv = document.getElementById('addFacErrorMsg');
+            errorDiv.style.display = 'none';
+
+            const facility = {
+                facilityName: document.getElementById('facName').value.trim(),
+                village: document.getElementById('facVillage').value.trim(),
+                facilityType: document.getElementById('facType').value,
+                location: document.getElementById('facLocation').value.trim() || null,
+                conditionStatus: document.getElementById('facCondition').value,
+                cleanlinessStatus: document.getElementById('facCleanliness').value,
+                lastInspectionDate: document.getElementById('facInspectionDate').value || null,
+                maintenanceNotes: document.getElementById('facNotes').value.trim() || null
+            };
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Saving...';
+
+            try {
+                const response = await fetch('/api/sanitation-facilities', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(facility)
+                });
+
+                if (response.status === 201) {
+                    showToast('Sanitation facility registered successfully!', 'success');
+                    closeModal('addFacilityModal');
+                    setTimeout(() => window.location.reload(), 400);
+                } else {
+                    const errorData = await response.json().catch(() => null);
+                    errorDiv.textContent = errorData?.error || 'Failed to save facility. Check required fields.';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Server communication error.';
+                errorDiv.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Save Facility';
+            }
+        }
+    </script>
+
+</body>
+
+</html>

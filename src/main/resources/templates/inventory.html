@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+
+<head th:replace="~{fragments/layout :: head('Medicine Inventory')}"></head>
+
+<body>
+
+    <div class="app-container">
+        <!-- Reusable Sidebar -->
+        <aside th:replace="~{fragments/layout :: sidebar('inventory')}"></aside>
+
+        <!-- Main Content Area -->
+        <main class="app-main">
+            <header
+                th:replace="~{fragments/layout :: header('Medicine Inventory', 'Pharmaceutical Stock, Dispensary Log & Replenishment Pipeline')}">
+            </header>
+
+            <div class="content-wrapper">
+                <!-- Navigation Tabs -->
+                <div class="module-tabs">
+                    <button type="button" class="module-tab-btn active" onclick="switchTab('catalogTab', this)">
+                        <span>Stock Catalog</span>
+                        <span class="tab-badge" th:text="${medicines != null ? medicines.size() : 0}">0</span>
+                    </button>
+                    <button type="button" class="module-tab-btn" onclick="switchTab('lowStockTab', this)">
+                        <span>Low Stock Alerts</span>
+                        <span class="tab-badge tab-badge-alert"
+                            th:text="${lowStockMedicines != null ? lowStockMedicines.size() : 0}">0</span>
+                    </button>
+                    <button type="button" class="module-tab-btn" onclick="switchTab('issuesTab', this)">
+                        <span>Dispensed Log</span>
+                        <span class="tab-badge" th:text="${issues != null ? issues.size() : 0}">0</span>
+                    </button>
+                    <button type="button" class="module-tab-btn" onclick="switchTab('replenishmentsTab', this)">
+                        <span>Replenishments</span>
+                        <span class="tab-badge" th:text="${replenishments != null ? replenishments.size() : 0}">0</span>
+                    </button>
+                </div>
+
+                <!-- TAB 1: Stock Catalog -->
+                <div class="tab-pane active" id="catalogTab">
+                    <div class="page-toolbar">
+                        <div class="search-box">
+                            <svg class="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <input type="text" id="catalogSearch" placeholder="Search medicines by name or batch..."
+                                onkeyup="filterTable('catalogSearch', 'catalogTable')">
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <button type="button" class="btn btn-secondary" onclick="openIssueModal()">
+                                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                </svg>
+                                Dispense / Issue
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="openAddMedicineModal()">
+                                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 4v16m8-8H4" />
+                                </svg>
+                                Add New Medicine
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-container" th:if="${medicines != null and !medicines.isEmpty()}">
+                        <table class="data-table" id="catalogTable">
+                            <thead>
+                                <tr>
+                                    <th style="width: 70px;">ID</th>
+                                    <th>Medicine Name</th>
+                                    <th>Batch No.</th>
+                                    <th>Expiry Date</th>
+                                    <th>Current Stock</th>
+                                    <th>Reorder Level</th>
+                                    <th>Stock Status</th>
+                                    <th style="text-align: right; width: 140px;">Quick Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="m : ${medicines}">
+                                    <td th:text="'#' + ${m.id}">#1</td>
+                                    <td style="font-weight: 600;" th:text="${m.name}">Paracetamol 500mg</td>
+                                    <td
+                                        th:text="${m.batchNumber != null and !m.batchNumber.isEmpty() ? m.batchNumber : '—'}">
+                                        BATCH-001</td>
+                                    <td th:text="${#temporals.format(m.expiryDate, 'dd MMM yyyy')}">31 Dec 2026</td>
+                                    <td>
+                                        <strong th:text="${m.stockQuantity}">150</strong> units
+                                    </td>
+                                    <td th:text="${m.reorderLevel} + ' units'">20 units</td>
+                                    <td>
+                                        <span class="badge badge-danger"
+                                            th:if="${m.stockQuantity <= m.reorderLevel}">LOW STOCK</span>
+                                        <span class="badge badge-success"
+                                            th:if="${m.stockQuantity > m.reorderLevel}">ADEQUATE</span>
+                                    </td>
+                                    <td style="text-align: right;">
+                                        <button type="button" class="btn btn-secondary btn-sm" th:data-id="${m.id}"
+                                            th:data-name="${m.name}" onclick="openQuickReplenish(this)">Order
+                                            Stock</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="empty-state" th:if="${medicines == null or medicines.isEmpty()}">
+                        <svg class="empty-state-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg>
+                        <h3>No Medicines in Inventory</h3>
+                        <p>Add pharmaceuticals to monitor stock quantities, expiration dates, and reorder levels.</p>
+                        <button type="button" class="btn btn-primary" onclick="openAddMedicineModal()">Add First
+                            Medicine</button>
+                    </div>
+                </div>
+
+                <!-- TAB 2: Low Stock Alerts -->
+                <div class="tab-pane" id="lowStockTab">
+                    <div class="table-container" th:if="${lowStockMedicines != null and !lowStockMedicines.isEmpty()}">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Medicine</th>
+                                    <th>Batch</th>
+                                    <th>Expiry Date</th>
+                                    <th>Remaining Stock</th>
+                                    <th>Threshold</th>
+                                    <th>Deficit</th>
+                                    <th style="text-align: right;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="m : ${lowStockMedicines}" style="background-color: #fff1f2;">
+                                    <td style="font-weight: 600; color: #b91c1c;" th:text="${m.name}">Amoxicillin 250mg
+                                    </td>
+                                    <td th:text="${m.batchNumber}">AMX-891</td>
+                                    <td th:text="${#temporals.format(m.expiryDate, 'dd MMM yyyy')}">15 Nov 2026</td>
+                                    <td><strong th:text="${m.stockQuantity}">5</strong> units</td>
+                                    <td th:text="${m.reorderLevel}">20</td>
+                                    <td><span class="badge badge-danger"
+                                            th:text="${m.reorderLevel - m.stockQuantity} + ' units below'">15 units
+                                            below</span></td>
+                                    <td style="text-align: right;">
+                                        <button type="button" class="btn btn-danger btn-sm" th:data-id="${m.id}"
+                                            th:data-name="${m.name}" onclick="openQuickReplenish(this)">Create
+                                            Replenishment</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="empty-state" th:if="${lowStockMedicines == null or lowStockMedicines.isEmpty()}">
+                        <svg class="empty-state-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            style="color: var(--success);">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <h3>All Medicine Stock Levels Healthy</h3>
+                        <p>No medicines are currently at or below their designated reorder threshold.</p>
+                    </div>
+                </div>
+
+                <!-- TAB 3: Dispensed Issues Log -->
+                <div class="tab-pane" id="issuesTab">
+                    <div class="table-container" th:if="${issues != null and !issues.isEmpty()}">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Issue #</th>
+                                    <th>Medicine ID</th>
+                                    <th>Resident Recipient</th>
+                                    <th>Consultation Ref</th>
+                                    <th>Quantity Dispensed</th>
+                                    <th>Date &amp; Time</th>
+                                    <th>Prescription Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="issue : ${issues}">
+                                    <td th:text="'#' + ${issue.id}">#1</td>
+                                    <td><span style="font-weight: 600;"
+                                            th:text="'Medicine #' + ${issue.medicineId}">Medicine #1</span></td>
+                                    <td th:text="'Resident #' + ${issue.residentId}">Resident #1</td>
+                                    <td
+                                        th:text="${issue.consultationId != null ? 'Consultation #' + issue.consultationId : 'Direct Walk-in'}">
+                                        Consultation #1</td>
+                                    <td><strong th:text="${issue.quantityIssued}">10</strong> units</td>
+                                    <td th:text="${#temporals.format(issue.issuedAt, 'dd MMM yyyy, hh:mm a')}">12 Oct
+                                        2026, 11:30 AM</td>
+                                    <td style="color: var(--slate-600); font-size: 0.8rem;"
+                                        th:text="${issue.notes != null and !issue.notes.isEmpty() ? issue.notes : '—'}">
+                                        Post consultation</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="empty-state" th:if="${issues == null or issues.isEmpty()}">
+                        <svg class="empty-state-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                        <h3>No Dispensing Logs Yet</h3>
+                        <p>Dispensed medicines issued to village residents will be tracked here atomically.</p>
+                        <button type="button" class="btn btn-primary" onclick="openIssueModal()">Issue First
+                            Prescription</button>
+                    </div>
+                </div>
+
+                <!-- TAB 4: Replenishments Pipeline -->
+                <div class="tab-pane" id="replenishmentsTab">
+                    <div class="table-container" th:if="${replenishments != null and !replenishments.isEmpty()}">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Order #</th>
+                                    <th>Medicine</th>
+                                    <th>Requested Quantity</th>
+                                    <th>Status</th>
+                                    <th>Requested Date</th>
+                                    <th>Remarks</th>
+                                    <th style="text-align: right; width: 220px;">Pipeline Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="r : ${replenishments}">
+                                    <td th:text="'#' + ${r.id}">#1</td>
+                                    <td><span style="font-weight: 600;"
+                                            th:text="'Medicine #' + ${r.medicineId}">Medicine #1</span></td>
+                                    <td><strong th:text="${r.requestedQuantity}">100</strong> units</td>
+                                    <td>
+                                        <span class="badge"
+                                            th:classappend="${r.status.name() == 'RECEIVED' ? 'badge-success' : (r.status.name() == 'APPROVED' ? 'badge-info' : (r.status.name() == 'REJECTED' ? 'badge-danger' : 'badge-warning'))}"
+                                            th:text="${r.status}">PENDING</span>
+                                    </td>
+                                    <td th:text="${#temporals.format(r.requestedAt, 'dd MMM yyyy, hh:mm a')}">12 Oct
+                                        2026, 12:00 PM</td>
+                                    <td style="color: var(--slate-600); font-size: 0.8rem;"
+                                        th:text="${r.remarks != null and !r.remarks.isEmpty() ? r.remarks : '—'}">
+                                        Seasonal restock</td>
+                                    <td style="text-align: right;">
+                                        <div class="table-actions" style="justify-content: flex-end;">
+                                            <!-- Actions when status is PENDING -->
+                                            <th:block th:if="${r.status.name() == 'PENDING'}">
+                                                <button type="button" class="btn btn-primary btn-sm"
+                                                    th:data-id="${r.id}"
+                                                    onclick="updateStatus(this, 'APPROVED')">Approve</button>
+                                                <button type="button" class="btn btn-danger btn-sm" th:data-id="${r.id}"
+                                                    onclick="updateStatus(this, 'REJECTED')">Reject</button>
+                                            </th:block>
+
+                                            <!-- Action when status is APPROVED: Mark Received (automatically increments stock) -->
+                                            <th:block th:if="${r.status.name() == 'APPROVED'}">
+                                                <button type="button" class="btn btn-primary btn-sm"
+                                                    style="background-color: var(--success);" th:data-id="${r.id}"
+                                                    onclick="updateStatus(this, 'RECEIVED')">Mark Received (+
+                                                    Stock)</button>
+                                            </th:block>
+
+                                            <span
+                                                th:if="${r.status.name() == 'RECEIVED' or r.status.name() == 'REJECTED'}"
+                                                style="color: var(--slate-400); font-size: 0.75rem;">Closed</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="empty-state" th:if="${replenishments == null or replenishments.isEmpty()}">
+                        <svg class="empty-state-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <h3>No Replenishment Orders</h3>
+                        <p>Request stock batches from central supply chains and manage receipt confirmations.</p>
+                        <button type="button" class="btn btn-primary" onclick="openReplenishModal()">Request
+                            Stock</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 
+     Modal 1: Add New Medicine
+     -->
+    <div class="modal-overlay" id="addMedicineModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 class="modal-title">Add New Medicine</h3>
+                <button type="button" class="modal-close" onclick="closeModal('addMedicineModal')">&times;</button>
+            </div>
+            <form id="addMedicineForm" onsubmit="handleAddMedicine(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label" for="medName">Medicine Name *</label>
+                        <input type="text" id="medName" class="form-control" placeholder="e.g. Paracetamol 500mg"
+                            required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="medBatch">Batch Number</label>
+                            <input type="text" id="medBatch" class="form-control" placeholder="e.g. BATCH-2026-A">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="medExpiry">Expiry Date *</label>
+                            <input type="date" id="medExpiry" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="medStock">Initial Stock Quantity *</label>
+                            <input type="number" id="medStock" class="form-control" min="0" placeholder="e.g. 100"
+                                required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="medReorder">Reorder Threshold *</label>
+                            <input type="number" id="medReorder" class="form-control" min="0" placeholder="e.g. 20"
+                                required>
+                        </div>
+                    </div>
+
+                    <div id="addMedErrorMsg"
+                        style="color: var(--danger); font-size: 0.8rem; margin-top: 0.5rem; display: none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="closeModal('addMedicineModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="addMedBtn">Save Medicine</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 
+     Modal 2: Issue / Dispense Medicine
+      -->
+    <div class="modal-overlay" id="issueMedicineModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 class="modal-title">Dispense / Issue Medicine</h3>
+                <button type="button" class="modal-close" onclick="closeModal('issueMedicineModal')">&times;</button>
+            </div>
+            <form id="issueMedicineForm" onsubmit="handleIssueMedicine(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label" for="issueMedicineId">Select Medicine *</label>
+                        <select id="issueMedicineId" class="form-select" required>
+                            <option value="">Choose medicine in stock</option>
+                            <option th:each="m : ${medicines}" th:value="${m.id}"
+                                th:text="${m.name + ' (Available: ' + m.stockQuantity + ')'}">Paracetamol 500mg</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="issueResidentId">Recipient Resident *</label>
+                        <select id="issueResidentId" class="form-select" required>
+                            <option value="">Choose recipient resident</option>
+                            <option th:each="res : ${residents}" th:value="${res.id}"
+                                th:text="${res.name + ' (' + res.village + ' - #' + res.id + ')'}">Ramesh Kumar</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="issueQuantity">Quantity to Dispense *</label>
+                            <input type="number" id="issueQuantity" class="form-control" min="1" placeholder="e.g. 10"
+                                required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="issueConsultationId">Consultation ID (Optional)</label>
+                            <input type="number" id="issueConsultationId" class="form-control" min="1"
+                                placeholder="e.g. 5">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="issueNotes">Dispensing / Prescription Notes</label>
+                        <input type="text" id="issueNotes" class="form-control"
+                            placeholder="e.g. 1 tablet twice daily after meals">
+                    </div>
+
+                    <div id="issueErrorMsg"
+                        style="color: var(--danger); font-size: 0.8rem; margin-top: 0.5rem; display: none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="closeModal('issueMedicineModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="issueBtn">Dispense Medicine</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!--
+     Modal 3: Request Replenishment
+      -->
+    <div class="modal-overlay" id="replenishModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 class="modal-title">Request Stock Replenishment</h3>
+                <button type="button" class="modal-close" onclick="closeModal('replenishModal')">&times;</button>
+            </div>
+            <form id="replenishForm" onsubmit="handleCreateReplenish(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label" for="repMedicineId">Select Medicine *</label>
+                        <select id="repMedicineId" class="form-select" required>
+                            <option value="">Choose medicine</option>
+                            <option th:each="m : ${medicines}" th:value="${m.id}"
+                                th:text="${m.name + ' (Current Stock: ' + m.stockQuantity + ')'}">Paracetamol 500mg
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="repQuantity">Requested Quantity *</label>
+                        <input type="number" id="repQuantity" class="form-control" min="1" placeholder="e.g. 100"
+                            required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="repRemarks">Remarks / Reason</label>
+                        <input type="text" id="repRemarks" class="form-control"
+                            placeholder="e.g. High incidence of viral flu expected">
+                    </div>
+
+                    <div id="repErrorMsg"
+                        style="color: var(--danger); font-size: 0.8rem; margin-top: 0.5rem; display: none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="closeModal('replenishModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="repSubmitBtn">Submit Order</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Layout Scripts -->
+    <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+
+    <script>
+        function switchTab(tabId, btn) {
+            document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.module-tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            btn.classList.add('active');
+        }
+
+        function openAddMedicineModal() {
+            document.getElementById('addMedicineForm').reset();
+            document.getElementById('addMedErrorMsg').style.display = 'none';
+            document.getElementById('addMedicineModal').classList.add('active');
+        }
+
+        function openIssueModal() {
+            document.getElementById('issueMedicineForm').reset();
+            document.getElementById('issueErrorMsg').style.display = 'none';
+            document.getElementById('issueMedicineModal').classList.add('active');
+        }
+
+        function openReplenishModal() {
+            document.getElementById('replenishForm').reset();
+            document.getElementById('repErrorMsg').style.display = 'none';
+            document.getElementById('replenishModal').classList.add('active');
+        }
+
+        function openQuickReplenish(btn) {
+            const medId = btn.getAttribute('data-id');
+            openReplenishModal();
+            document.getElementById('repMedicineId').value = medId;
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function filterTable(inputId, tableId) {
+            const query = document.getElementById(inputId).value.toLowerCase();
+            const rows = document.querySelectorAll('#' + tableId + ' tbody tr');
+            rows.forEach(row => {
+                row.style.display = row.textContent.toLowerCase().includes(query) ? '' : 'none';
+            });
+        }
+
+        // Add Medicine submission
+        async function handleAddMedicine(event) {
+            event.preventDefault();
+            const submitBtn = document.getElementById('addMedBtn');
+            const errorDiv = document.getElementById('addMedErrorMsg');
+            errorDiv.style.display = 'none';
+
+            const medicine = {
+                name: document.getElementById('medName').value.trim(),
+                batchNumber: document.getElementById('medBatch').value.trim() || null,
+                expiryDate: document.getElementById('medExpiry').value,
+                stockQuantity: parseInt(document.getElementById('medStock').value),
+                reorderLevel: parseInt(document.getElementById('medReorder').value)
+            };
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Saving...';
+
+            try {
+                const response = await fetch('/api/inventory/medicines', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(medicine)
+                });
+
+                if (response.status === 201) {
+                    showToast('Medicine registered to inventory!', 'success');
+                    closeModal('addMedicineModal');
+                    setTimeout(() => window.location.reload(), 400);
+                } else {
+                    const errorData = await response.json().catch(() => null);
+                    errorDiv.textContent = errorData?.error || errorData?.message || 'Failed to save medicine.';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Server communication error.';
+                errorDiv.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Save Medicine';
+            }
+        }
+
+        // Issue Medicine submission
+        async function handleIssueMedicine(event) {
+            event.preventDefault();
+            const submitBtn = document.getElementById('issueBtn');
+            const errorDiv = document.getElementById('issueErrorMsg');
+            errorDiv.style.display = 'none';
+
+            const consultationVal = document.getElementById('issueConsultationId').value;
+            const issueRequest = {
+                medicineId: parseInt(document.getElementById('issueMedicineId').value),
+                residentId: parseInt(document.getElementById('issueResidentId').value),
+                consultationId: consultationVal ? parseInt(consultationVal) : null,
+                quantityIssued: parseInt(document.getElementById('issueQuantity').value),
+                notes: document.getElementById('issueNotes').value.trim() || null
+            };
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Dispensing...';
+
+            try {
+                const response = await fetch('/api/inventory/issues', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(issueRequest)
+                });
+
+                if (response.status === 201) {
+                    showToast('Medicine dispensed and stock deducted successfully!', 'success');
+                    closeModal('issueMedicineModal');
+                    setTimeout(() => window.location.reload(), 400);
+                } else {
+                    const errorData = await response.json().catch(() => null);
+                    errorDiv.textContent = errorData?.error || errorData?.message || 'Dispensing failed. Check stock availability.';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Server communication error.';
+                errorDiv.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Dispense Medicine';
+            }
+        }
+
+        // Create Replenishment submission
+        async function handleCreateReplenish(event) {
+            event.preventDefault();
+            const submitBtn = document.getElementById('repSubmitBtn');
+            const errorDiv = document.getElementById('repErrorMsg');
+            errorDiv.style.display = 'none';
+
+            const reqDto = {
+                medicineId: parseInt(document.getElementById('repMedicineId').value),
+                requestedQuantity: parseInt(document.getElementById('repQuantity').value),
+                remarks: document.getElementById('repRemarks').value.trim() || null
+            };
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+
+            try {
+                const response = await fetch('/api/inventory/replenishments', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(reqDto)
+                });
+
+                if (response.status === 201) {
+                    showToast('Replenishment order requested!', 'success');
+                    closeModal('replenishModal');
+                    setTimeout(() => window.location.reload(), 400);
+                } else {
+                    const errorData = await response.json().catch(() => null);
+                    errorDiv.textContent = errorData?.error || errorData?.message || 'Failed to submit order.';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Server communication error.';
+                errorDiv.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Order';
+            }
+        }
+
+        // Update Replenishment Status (Approve / Reject / Mark Received)
+        async function updateStatus(button, newStatus) {
+            const id = button.getAttribute('data-id');
+            const confirmMsg = newStatus === 'RECEIVED'
+                ? 'Confirm receipt of replenishment #' + id + '? This will automatically increment stock.'
+                : 'Update status of replenishment #' + id + ' to ' + newStatus + '?';
+
+            if (!confirm(confirmMsg)) return;
+
+            try {
+                const response = await fetch('/api/inventory/replenishments/' + id + '/status?status=' + newStatus, {
+                    method: 'PATCH'
+                });
+
+                if (response.ok) {
+                    showToast('Replenishment updated to ' + newStatus + '!', 'success');
+                    setTimeout(() => window.location.reload(), 400);
+                } else {
+                    const errorData = await response.json().catch(() => null);
+                    showToast(errorData?.error || 'Failed to update replenishment status.', 'error');
+                }
+            } catch (err) {
+                showToast('Server communication error.', 'error');
+            }
+        }
+    </script>
+
+</body>
+
+</html>

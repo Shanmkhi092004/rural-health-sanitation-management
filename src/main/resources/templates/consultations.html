@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head('Clinical Consultations')}"></head>
+<body>
+
+<div class="app-container">
+    <!-- Reusable Sidebar -->
+    <aside th:replace="~{fragments/layout :: sidebar('consultations')}"></aside>
+
+    <!-- Main Content Area -->
+    <main class="app-main">
+        <header th:replace="~{fragments/layout :: header('Clinical Consultations', 'Medical Diagnoses, Symptoms & Prescriptions')}"></header>
+
+        <div class="content-wrapper">
+            <!-- Page Toolbar -->
+            <div class="page-toolbar">
+                <div class="search-box">
+                    <svg class="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                    <input type="text" id="consultationSearch" placeholder="Search by symptoms, diagnosis, or treatment..." onkeyup="filterConsultations()">
+                </div>
+                <div>
+                    <button type="button" class="btn btn-primary" onclick="openAddModal()">
+                        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        Record Consultation
+                    </button>
+                </div>
+            </div>
+
+            <!-- Consultations Table -->
+            <div class="table-container" th:if="${consultations != null and !consultations.isEmpty()}">
+                <table class="data-table" id="consultationsTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 70px;">ID</th>
+                            <th>Resident</th>
+                            <th>Health Centre</th>
+                            <th>Date &amp; Time</th>
+                            <th>Reported Symptoms</th>
+                            <th>Clinical Diagnosis</th>
+                            <th>Treatment Prescribed</th>
+                            <th>Follow-up Notes</th>
+                            <th style="text-align: right; width: 140px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="c : ${consultations}" th:id="'consultation-row-' + ${c.id}">
+                            <td class="c-id" th:text="'#' + ${c.id}">#1</td>
+                            <td class="c-resident">
+                                <span style="font-weight: 600;" th:text="'Resident #' + ${c.residentId}">Resident #1</span>
+                            </td>
+                            <td class="c-centre">
+                                <span th:text="'Centre #' + ${c.healthCentreId}">Centre #1</span>
+                            </td>
+                            <td class="c-date" th:text="${#temporals.format(c.consultationDate, 'dd MMM yyyy, hh:mm a')}">12 Oct 2026, 11:00 AM</td>
+                            <td class="c-symptoms" th:text="${c.symptoms}">Persistent fever, joint pain</td>
+                            <td class="c-diagnosis">
+                                <span class="badge badge-warning" th:text="${c.diagnosis}">Viral Fever</span>
+                            </td>
+                            <td class="c-treatment" th:text="${c.treatment != null and !c.treatment.isEmpty() ? c.treatment : '—'}">Paracetamol 500mg, oral rehydration</td>
+                            <td class="c-notes" style="color: var(--slate-600); font-size: 0.8rem;" th:text="${c.followUpNotes != null and !c.followUpNotes.isEmpty() ? c.followUpNotes : '—'}">Review after 3 days</td>
+                            <td style="text-align: right;">
+                                <div class="table-actions" style="justify-content: flex-end;">
+                                    <button type="button" class="btn btn-secondary btn-sm"
+                                            th:data-id="${c.id}"
+                                            th:data-resident-id="${c.residentId}"
+                                            th:data-centre-id="${c.healthCentreId}"
+                                            th:data-date="${c.consultationDate}"
+                                            th:data-symptoms="${c.symptoms}"
+                                            th:data-diagnosis="${c.diagnosis}"
+                                            th:data-treatment="${c.treatment}"
+                                            th:data-notes="${c.followUpNotes}"
+                                            onclick="openEditModal(this)">Edit</button>
+                                    <button type="button" class="btn btn-danger btn-sm"
+                                            th:data-id="${c.id}"
+                                            onclick="confirmDelete(this)">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Empty State when table has no records -->
+            <div class="empty-state" id="emptyState" th:if="${consultations == null or consultations.isEmpty()}">
+                <svg class="empty-state-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <h3>No Clinical Consultations Recorded Yet</h3>
+                <p>Record medical checkups, symptoms, diagnoses, and treatments provided to village residents.</p>
+                <button type="button" class="btn btn-primary" onclick="openAddModal()">Record First Consultation</button>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- ==========================================================================
+     Record Consultation Modal
+     ========================================================================== -->
+<div class="modal-overlay" id="addConsultationModal">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h3 class="modal-title">Record Clinical Consultation</h3>
+            <button type="button" class="modal-close" onclick="closeModal('addConsultationModal')">&times;</button>
+        </div>
+        <form id="addConsultationForm" onsubmit="handleAddConsultation(event)">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="addResidentId">Resident *</label>
+                    <select id="addResidentId" class="form-select" required>
+                        <option value="">Select Resident</option>
+                        <option th:each="res : ${residents}"
+                                th:value="${res.id}"
+                                th:text="${res.name + ' (' + res.village + ' - #' + res.id + ')'}">Ramesh Kumar (Sundarpur)</option>
+                    </select>
+                    <span class="form-hint" th:if="${residents == null or residents.isEmpty()}">
+                        No residents available. <a th:href="@{/residents}" style="color: var(--primary-700);">Register a resident first</a>.
+                    </span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="addHealthCentreId">Health Centre *</label>
+                    <select id="addHealthCentreId" class="form-select" required>
+                        <option value="">Select Health Centre</option>
+                        <option th:each="centre : ${healthCentres}"
+                                th:value="${centre.id}"
+                                th:text="${centre.name + ' (' + centre.village + ' - #' + centre.id + ')'}">Sundarpur Sub-Centre</option>
+                    </select>
+                    <span class="form-hint" th:if="${healthCentres == null or healthCentres.isEmpty()}">
+                        No centres available. <a th:href="@{/health-centres}" style="color: var(--primary-700);">Register a centre first</a>.
+                    </span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="addConsultationDate">Consultation Date &amp; Time *</label>
+                    <input type="datetime-local" id="addConsultationDate" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="addSymptoms">Symptoms Observed / Reported *</label>
+                    <input type="text" id="addSymptoms" class="form-control" placeholder="e.g. High fever, headache, body chills" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="addDiagnosis">Clinical Diagnosis *</label>
+                    <input type="text" id="addDiagnosis" class="form-control" placeholder="e.g. Acute Bronchitis, Malaria, Gastroenteritis" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="addTreatment">Treatment / Prescribed Medications</label>
+                    <input type="text" id="addTreatment" class="form-control" placeholder="e.g. Amoxicillin 500mg TDS 5 days, ORS sachets">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="addNotes">Follow-up Advice / Notes</label>
+                    <input type="text" id="addNotes" class="form-control" placeholder="e.g. Return in 5 days if fever persists; drink boiled water">
+                </div>
+
+                <div id="addErrorMsg" style="color: var(--danger); font-size: 0.8rem; margin-top: 0.5rem; display: none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('addConsultationModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="addSubmitBtn">Save Consultation</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ==========================================================================
+     Edit Consultation Modal
+     ========================================================================== -->
+<div class="modal-overlay" id="editConsultationModal">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h3 class="modal-title">Edit Consultation</h3>
+            <button type="button" class="modal-close" onclick="closeModal('editConsultationModal')">&times;</button>
+        </div>
+        <form id="editConsultationForm" onsubmit="handleEditConsultation(event)">
+            <input type="hidden" id="editId">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="editResidentId">Resident *</label>
+                    <select id="editResidentId" class="form-select" required>
+                        <option value="">Select Resident</option>
+                        <option th:each="res : ${residents}"
+                                th:value="${res.id}"
+                                th:text="${res.name + ' (' + res.village + ' - #' + res.id + ')'}">Ramesh Kumar (Sundarpur)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="editHealthCentreId">Health Centre *</label>
+                    <select id="editHealthCentreId" class="form-select" required>
+                        <option value="">Select Health Centre</option>
+                        <option th:each="centre : ${healthCentres}"
+                                th:value="${centre.id}"
+                                th:text="${centre.name + ' (' + centre.village + ' - #' + centre.id + ')'}">Sundarpur Sub-Centre</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="editConsultationDate">Consultation Date &amp; Time *</label>
+                    <input type="datetime-local" id="editConsultationDate" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="editSymptoms">Symptoms *</label>
+                    <input type="text" id="editSymptoms" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="editDiagnosis">Diagnosis *</label>
+                    <input type="text" id="editDiagnosis" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="editTreatment">Treatment</label>
+                    <input type="text" id="editTreatment" class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="editNotes">Follow-up Notes</label>
+                    <input type="text" id="editNotes" class="form-control">
+                </div>
+
+                <div id="editErrorMsg" style="color: var(--danger); font-size: 0.8rem; margin-top: 0.5rem; display: none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editConsultationModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="editSubmitBtn">Update Consultation</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Layout Scripts -->
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+
+<script>
+function openAddModal() {
+    document.getElementById('addConsultationForm').reset();
+    document.getElementById('addErrorMsg').style.display = 'none';
+    document.getElementById('addConsultationModal').classList.add('active');
+}
+
+function openEditModal(button) {
+    const id = button.getAttribute('data-id');
+    const residentId = button.getAttribute('data-resident-id');
+    const centreId = button.getAttribute('data-centre-id');
+    const rawDate = button.getAttribute('data-date');
+    const symptoms = button.getAttribute('data-symptoms');
+    const diagnosis = button.getAttribute('data-diagnosis');
+    const treatment = button.getAttribute('data-treatment') || '';
+    const notes = button.getAttribute('data-notes') || '';
+
+    document.getElementById('editId').value = id;
+    document.getElementById('editResidentId').value = residentId;
+    document.getElementById('editHealthCentreId').value = centreId;
+    if (rawDate) {
+        document.getElementById('editConsultationDate').value = rawDate.substring(0, 16);
+    }
+    document.getElementById('editSymptoms').value = symptoms;
+    document.getElementById('editDiagnosis').value = diagnosis;
+    document.getElementById('editTreatment').value = treatment;
+    document.getElementById('editNotes').value = notes;
+    document.getElementById('editErrorMsg').style.display = 'none';
+
+    document.getElementById('editConsultationModal').classList.add('active');
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.remove('active');
+}
+
+function filterConsultations() {
+    const query = document.getElementById('consultationSearch').value.toLowerCase();
+    const rows = document.querySelectorAll('#consultationsTable tbody tr');
+
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        if (text.includes(query)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+// Handle Add Consultation API submission
+async function handleAddConsultation(event) {
+    event.preventDefault();
+    const submitBtn = document.getElementById('addSubmitBtn');
+    const errorDiv = document.getElementById('addErrorMsg');
+    errorDiv.style.display = 'none';
+
+    const rawDate = document.getElementById('addConsultationDate').value;
+    const consultation = {
+        residentId: parseInt(document.getElementById('addResidentId').value),
+        healthCentreId: parseInt(document.getElementById('addHealthCentreId').value),
+        consultationDate: rawDate ? rawDate + ':00' : null,
+        symptoms: document.getElementById('addSymptoms').value.trim(),
+        diagnosis: document.getElementById('addDiagnosis').value.trim(),
+        treatment: document.getElementById('addTreatment').value.trim() || null,
+        followUpNotes: document.getElementById('addNotes').value.trim() || null
+    };
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Saving...';
+
+    try {
+        const response = await fetch('/api/consultations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(consultation)
+        });
+
+        if (response.status === 201) {
+            showToast('Consultation recorded successfully!', 'success');
+            closeModal('addConsultationModal');
+            setTimeout(() => window.location.reload(), 400);
+        } else {
+            const errorData = await response.json().catch(() => null);
+            const msg = errorData?.message || errorData?.error || 'Failed to record consultation.';
+            errorDiv.textContent = msg;
+            errorDiv.style.display = 'block';
+        }
+    } catch (err) {
+        errorDiv.textContent = 'Server communication error. Please try again.';
+        errorDiv.style.display = 'block';
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save Consultation';
+    }
+}
+
+// Handle Edit Consultation API submission
+async function handleEditConsultation(event) {
+    event.preventDefault();
+    const id = document.getElementById('editId').value;
+    const submitBtn = document.getElementById('editSubmitBtn');
+    const errorDiv = document.getElementById('editErrorMsg');
+    errorDiv.style.display = 'none';
+
+    const rawDate = document.getElementById('editConsultationDate').value;
+    const consultation = {
+        residentId: parseInt(document.getElementById('editResidentId').value),
+        healthCentreId: parseInt(document.getElementById('editHealthCentreId').value),
+        consultationDate: rawDate.length === 16 ? rawDate + ':00' : rawDate,
+        symptoms: document.getElementById('editSymptoms').value.trim(),
+        diagnosis: document.getElementById('editDiagnosis').value.trim(),
+        treatment: document.getElementById('editTreatment').value.trim() || null,
+        followUpNotes: document.getElementById('editNotes').value.trim() || null
+    };
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Updating...';
+
+    try {
+        const response = await fetch('/api/consultations/' + id, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(consultation)
+        });
+
+        if (response.ok) {
+            showToast('Consultation updated successfully!', 'success');
+            closeModal('editConsultationModal');
+            setTimeout(() => window.location.reload(), 400);
+        } else {
+            const errorData = await response.json().catch(() => null);
+            const msg = errorData?.message || errorData?.error || 'Update failed.';
+            errorDiv.textContent = msg;
+            errorDiv.style.display = 'block';
+        }
+    } catch (err) {
+        errorDiv.textContent = 'Server communication error. Please try again.';
+        errorDiv.style.display = 'block';
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Update Consultation';
+    }
+}
+
+// Handle Delete Consultation
+async function confirmDelete(button) {
+    const id = button.getAttribute('data-id');
+    if (!confirm('Are you sure you want to delete consultation #' + id + '?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/consultations/' + id, {
+            method: 'DELETE'
+        });
+
+        if (response.status === 204 || response.ok) {
+            showToast('Consultation deleted successfully.', 'success');
+            const row = document.getElementById('consultation-row-' + id);
+            if (row) row.remove();
+            const remaining = document.querySelectorAll('#consultationsTable tbody tr');
+            if (remaining.length === 0) {
+                setTimeout(() => window.location.reload(), 400);
+            }
+        } else {
+            showToast('Failed to delete consultation.', 'error');
+        }
+    } catch (err) {
+        showToast('Error communicating with server.', 'error');
+    }
+}
+</script>
+
+</body>
+</html>

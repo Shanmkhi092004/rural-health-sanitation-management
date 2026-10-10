@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+
+<head th:replace="~{fragments/layout :: head('Health Camps & Outreach')}"></head>
+
+<body>
+
+    <div class="app-container">
+        <!-- Reusable Sidebar -->
+        <aside th:replace="~{fragments/layout :: sidebar('health-camps')}"></aside>
+
+        <!-- Main Content Area -->
+        <main class="app-main">
+            <header
+                th:replace="~{fragments/layout :: header('Health Camps & Outreach', 'Free Community Health Screenings & Medical Drives')}">
+            </header>
+
+            <div class="content-wrapper">
+                <!-- Page Toolbar -->
+                <div class="page-toolbar">
+                    <div class="search-box">
+                        <svg class="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <input type="text" id="campSearch" placeholder="Search by camp name, village, organizer..."
+                            onkeyup="filterCamps()">
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-primary" onclick="openAddCampModal()">
+                            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 4v16m8-8H4" />
+                            </svg>
+                            Create Health Camp
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Health Camps Table -->
+                <div class="table-container" th:if="${camps != null and !camps.isEmpty()}">
+                    <table class="data-table" id="campsTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 70px;">ID</th>
+                                <th>Camp Name</th>
+                                <th>Village &amp; Location</th>
+                                <th>Camp Date</th>
+                                <th>Organizer</th>
+                                <th>Status</th>
+                                <th>Description</th>
+                                <th style="text-align: right; width: 220px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="c : ${camps}" th:id="'camp-row-' + ${c.id}">
+                                <td class="camp-id" th:text="'#' + ${c.id}">#1</td>
+                                <td class="camp-name" style="font-weight: 600;" th:text="${c.campName}">Free Eye
+                                    Screening Camp</td>
+                                <td class="camp-location">
+                                    <span th:text="${c.village}">Sundarpur</span>
+                                    <span th:if="${c.location != null and !c.location.isEmpty()}"
+                                        style="color: var(--slate-500); font-size: 0.78rem;"
+                                        th:text="' (' + ${c.location} + ')'"> (Community Hall)</span>
+                                </td>
+                                <td class="camp-date"
+                                    th:text="${c.campDate != null ? #temporals.format(c.campDate, 'dd MMM yyyy') : 'TBD'}">
+                                    20 Oct 2026</td>
+                                <td class="camp-organizer"
+                                    th:text="${c.organizer != null and !c.organizer.isEmpty() ? c.organizer : 'District Health Office'}">
+                                    District Health Office</td>
+                                <td class="camp-status">
+                                    <span class="badge"
+                                        th:classappend="${c.status == 'COMPLETED' ? 'badge-success' : (c.status == 'ONGOING' ? 'badge-warning' : (c.status == 'CANCELLED' ? 'badge-danger' : 'badge-info'))}"
+                                        th:text="${c.status}">PLANNED</span>
+                                </td>
+                                <td class="camp-desc"
+                                    style="color: var(--slate-600); font-size: 0.8rem; max-width: 200px;"
+                                    th:text="${c.description != null and !c.description.isEmpty() ? c.description : '—'}">
+                                    General screening drive</td>
+                                <td style="text-align: right;">
+                                    <div class="table-actions" style="justify-content: flex-end;">
+                                        <button type="button" class="btn btn-secondary btn-sm" th:data-id="${c.id}"
+                                            th:data-name="${c.campName}"
+                                            onclick="openBeneficiariesModal(this)">Beneficiaries</button>
+                                        <button type="button" class="btn btn-primary btn-sm" th:data-id="${c.id}"
+                                            th:data-name="${c.campName}" onclick="openAddBeneficiaryModal(this)">+
+                                            Register</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Empty State when table has no records -->
+                <div class="empty-state" id="emptyState" th:if="${camps == null or camps.isEmpty()}">
+                    <svg class="empty-state-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    <h3>No Health Camps Scheduled Yet</h3>
+                    <p>Plan community healthcare outreach camps, specialized diagnostic drives, and track resident
+                        screenings.</p>
+                    <button type="button" class="btn btn-primary" onclick="openAddCampModal()">Create First Health
+                        Camp</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 
+     Modal 1: Create Health Camp
+    -->
+    <div class="modal-overlay" id="addCampModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 class="modal-title">Create Health Camp</h3>
+                <button type="button" class="modal-close" onclick="closeModal('addCampModal')">&times;</button>
+            </div>
+            <form id="addCampForm" onsubmit="handleAddCamp(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label" for="campName">Camp Name *</label>
+                        <input type="text" id="campName" class="form-control"
+                            placeholder="e.g. Maternal & Child Health Camp" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="campVillage">Village *</label>
+                            <input type="text" id="campVillage" class="form-control" placeholder="e.g. Sundarpur"
+                                required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="campLocation">Specific Location / Venue</label>
+                            <input type="text" id="campLocation" class="form-control" placeholder="e.g. Community Hall">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="campDate">Camp Date</label>
+                            <input type="date" id="campDate" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="campStatus">Status</label>
+                            <select id="campStatus" class="form-select">
+                                <option value="PLANNED">PLANNED</option>
+                                <option value="ONGOING">ONGOING</option>
+                                <option value="COMPLETED">COMPLETED</option>
+                                <option value="CANCELLED">CANCELLED</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="campOrganizer">Organizing Team / NGO</label>
+                        <input type="text" id="campOrganizer" class="form-control"
+                            placeholder="e.g. Red Cross Rural Mission">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="campDescription">Description &amp; Objectives</label>
+                        <textarea id="campDescription" class="form-control" rows="2"
+                            placeholder="e.g. Blood pressure, blood glucose, and basic eye checkups."></textarea>
+                    </div>
+
+                    <div id="addCampErrorMsg"
+                        style="color: var(--danger); font-size: 0.8rem; margin-top: 0.5rem; display: none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('addCampModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="addCampSubmitBtn">Save Health Camp</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!--
+     Modal 2: Register Beneficiary
+     -->
+    <div class="modal-overlay" id="addBeneficiaryModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 class="modal-title">Register Beneficiary</h3>
+                <button type="button" class="modal-close" onclick="closeModal('addBeneficiaryModal')">&times;</button>
+            </div>
+            <form id="addBeneficiaryForm" onsubmit="handleAddBeneficiary(event)">
+                <input type="hidden" id="benCampId">
+                <div class="modal-body">
+                    <p style="font-size: 0.85rem; color: var(--slate-600); margin-bottom: 1rem;">
+                        Registering for: <strong id="benCampName" style="color: var(--slate-900);">Health Camp</strong>
+                    </p>
+
+                    <div class="form-group">
+                        <label class="form-label" for="benName">Beneficiary Full Name *</label>
+                        <input type="text" id="benName" class="form-control" placeholder="e.g. Meena Devi" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="benAge">Age (0 - 120)</label>
+                            <input type="number" id="benAge" class="form-control" min="0" max="120"
+                                placeholder="e.g. 45">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="benGender">Gender</label>
+                            <select id="benGender" class="form-select">
+                                <option value="">Select Gender</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="benVillage">Village</label>
+                            <input type="text" id="benVillage" class="form-control" placeholder="e.g. Sundarpur">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="benContact">Contact Number</label>
+                            <input type="tel" id="benContact" class="form-control" placeholder="e.g. 9876543210">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="benNotes">Screening Notes / Findings</label>
+                        <textarea id="benNotes" class="form-control" rows="2"
+                            placeholder="e.g. BP 120/80, normal vision, prescribed multivitamin"></textarea>
+                    </div>
+
+                    <div id="addBenErrorMsg"
+                        style="color: var(--danger); font-size: 0.8rem; margin-top: 0.5rem; display: none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="closeModal('addBeneficiaryModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="addBenSubmitBtn">Register Beneficiary</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!--
+     Modal 3: View Beneficiaries Table
+     -->
+    <div class="modal-overlay" id="viewBeneficiariesModal">
+        <div class="modal-dialog" style="max-width: 750px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="viewCampTitle">Camp Beneficiaries</h3>
+                <button type="button" class="modal-close"
+                    onclick="closeModal('viewBeneficiariesModal')">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 1rem;">
+                <div id="beneficiariesLoading" style="text-align: center; padding: 2rem; color: var(--slate-500);">
+                    Loading beneficiary records...
+                </div>
+                <div id="beneficiariesContent" style="display: none;">
+                    <div class="table-container">
+                        <table class="data-table" id="campBeneficiariesTable">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Age</th>
+                                    <th>Gender</th>
+                                    <th>Village</th>
+                                    <th>Contact</th>
+                                    <th>Screening Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="beneficiariesTableBody">
+                                <!-- Populated dynamically via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="beneficiariesEmpty" class="empty-state" style="display: none; padding: 2rem 1rem;">
+                    <p>No beneficiaries registered for this camp yet.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary"
+                    onclick="closeModal('viewBeneficiariesModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Layout Scripts -->
+    <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+
+    <script>
+        function openAddCampModal() {
+            document.getElementById('addCampForm').reset();
+            document.getElementById('addCampErrorMsg').style.display = 'none';
+            document.getElementById('addCampModal').classList.add('active');
+        }
+
+        function openAddBeneficiaryModal(button) {
+            const campId = button.getAttribute('data-id');
+            const campName = button.getAttribute('data-name');
+            document.getElementById('addBeneficiaryForm').reset();
+            document.getElementById('benCampId').value = campId;
+            document.getElementById('benCampName').textContent = campName + ' (#' + campId + ')';
+            document.getElementById('addBenErrorMsg').style.display = 'none';
+            document.getElementById('addBeneficiaryModal').classList.add('active');
+        }
+
+        async function openBeneficiariesModal(button) {
+            const campId = button.getAttribute('data-id');
+            const campName = button.getAttribute('data-name');
+
+            document.getElementById('viewCampTitle').textContent = 'Beneficiaries: ' + campName;
+            document.getElementById('beneficiariesLoading').style.display = 'block';
+            document.getElementById('beneficiariesContent').style.display = 'none';
+            document.getElementById('beneficiariesEmpty').style.display = 'none';
+            document.getElementById('viewBeneficiariesModal').classList.add('active');
+
+            try {
+                const response = await fetch('/api/health-camps/' + campId + '/beneficiaries');
+                if (response.ok) {
+                    const beneficiaries = await response.json();
+                    document.getElementById('beneficiariesLoading').style.display = 'none';
+
+                    if (beneficiaries && beneficiaries.length > 0) {
+                        const tbody = document.getElementById('beneficiariesTableBody');
+                        tbody.innerHTML = '';
+                        beneficiaries.forEach(b => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                        <td style="font-weight: 600;">${escapeHtml(b.beneficiaryName)}</td>
+                        <td>${b.age != null ? b.age : '—'}</td>
+                        <td><span class="badge badge-gender">${escapeHtml(b.gender || '—')}</span></td>
+                        <td>${escapeHtml(b.village || '—')}</td>
+                        <td>${escapeHtml(b.contactNumber || '—')}</td>
+                        <td style="font-size: 0.8rem; color: var(--slate-600);">${escapeHtml(b.screeningNotes || '—')}</td>
+                    `;
+                            tbody.appendChild(row);
+                        });
+                        document.getElementById('beneficiariesContent').style.display = 'block';
+                    } else {
+                        document.getElementById('beneficiariesEmpty').style.display = 'block';
+                    }
+                } else {
+                    document.getElementById('beneficiariesLoading').textContent = 'Failed to load beneficiaries.';
+                }
+            } catch (err) {
+                document.getElementById('beneficiariesLoading').textContent = 'Error connecting to server.';
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function filterCamps() {
+            const query = document.getElementById('campSearch').value.toLowerCase();
+            const rows = document.querySelectorAll('#campsTable tbody tr');
+            rows.forEach(row => {
+                row.style.display = row.textContent.toLowerCase().includes(query) ? '' : 'none';
+            });
+        }
+
+        // Handle Add Health Camp
+        async function handleAddCamp(event) {
+            event.preventDefault();
+            const submitBtn = document.getElementById('addCampSubmitBtn');
+            const errorDiv = document.getElementById('addCampErrorMsg');
+            errorDiv.style.display = 'none';
+
+            const camp = {
+                campName: document.getElementById('campName').value.trim(),
+                village: document.getElementById('campVillage').value.trim(),
+                location: document.getElementById('campLocation').value.trim() || null,
+                campDate: document.getElementById('campDate').value || null,
+                status: document.getElementById('campStatus').value,
+                organizer: document.getElementById('campOrganizer').value.trim() || null,
+                description: document.getElementById('campDescription').value.trim() || null
+            };
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Saving...';
+
+            try {
+                const response = await fetch('/api/health-camps', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(camp)
+                });
+
+                if (response.status === 201) {
+                    showToast('Health camp created successfully!', 'success');
+                    closeModal('addCampModal');
+                    setTimeout(() => window.location.reload(), 400);
+                } else {
+                    const errorData = await response.json().catch(() => null);
+                    errorDiv.textContent = errorData?.error || errorData?.message || 'Failed to create camp.';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Server communication error.';
+                errorDiv.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Save Health Camp';
+            }
+        }
+
+        // Handle Register Beneficiary
+        async function handleAddBeneficiary(event) {
+            event.preventDefault();
+            const campId = document.getElementById('benCampId').value;
+            const submitBtn = document.getElementById('addBenSubmitBtn');
+            const errorDiv = document.getElementById('addBenErrorMsg');
+            errorDiv.style.display = 'none';
+
+            const beneficiary = {
+                beneficiaryName: document.getElementById('benName').value.trim(),
+                age: document.getElementById('benAge').value ? parseInt(document.getElementById('benAge').value) : null,
+                gender: document.getElementById('benGender').value || null,
+                village: document.getElementById('benVillage').value.trim() || null,
+                contactNumber: document.getElementById('benContact').value.trim() || null,
+                screeningNotes: document.getElementById('benNotes').value.trim() || null
+            };
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Registering...';
+
+            try {
+                const response = await fetch('/api/health-camps/' + campId + '/beneficiaries', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(beneficiary)
+                });
+
+                if (response.status === 201) {
+                    showToast('Beneficiary registered successfully!', 'success');
+                    closeModal('addBeneficiaryModal');
+                    setTimeout(() => window.location.reload(), 400);
+                } else {
+                    const errorData = await response.json().catch(() => null);
+                    errorDiv.textContent = errorData?.error || errorData?.message || 'Failed to register beneficiary.';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Server communication error.';
+                errorDiv.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Register Beneficiary';
+            }
+        }
+    </script>
+
+</body>
+
+</html>

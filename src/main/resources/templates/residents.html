@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+
+<head th:replace="~{fragments/layout :: head('Resident Directory')}"></head>
+
+<body>
+
+    <div class="app-container">
+        <!-- Reusable Sidebar -->
+        <aside th:replace="~{fragments/layout :: sidebar('residents')}"></aside>
+
+        <!-- Main Content Area -->
+        <main class="app-main">
+            <header
+                th:replace="~{fragments/layout :: header('Resident Directory', 'Community Resident Profiles & Demographics')}">
+            </header>
+
+            <div class="content-wrapper">
+                <!-- Page Toolbar -->
+                <div class="page-toolbar">
+                    <div class="search-box">
+                        <svg class="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <input type="text" id="residentSearch" placeholder="Search by name, village, or phone..."
+                            onkeyup="filterResidents()">
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-primary" onclick="openAddModal()">
+                            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 4v16m8-8H4" />
+                            </svg>
+                            Register New Resident
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Residents Table or Empty State -->
+                <div class="table-container" th:if="${residents != null and !residents.isEmpty()}">
+                    <table class="data-table" id="residentsTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 70px;">ID</th>
+                                <th>Full Name</th>
+                                <th>Village</th>
+                                <th>Contact Phone</th>
+                                <th>Age</th>
+                                <th>Gender</th>
+                                <th style="text-align: right; width: 150px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="res : ${residents}" th:id="'resident-row-' + ${res.id}">
+                                <td class="res-id" th:text="'#' + ${res.id}">#1</td>
+                                <td class="res-name" style="font-weight: 600;" th:text="${res.name}">Ramesh Kumar</td>
+                                <td class="res-village" th:text="${res.village}">Sundarpur</td>
+                                <td class="res-phone"
+                                    th:text="${res.phone != null and !res.phone.isEmpty() ? res.phone : '—'}">9876543210
+                                </td>
+                                <td class="res-age" th:text="${res.age != null ? res.age : '—'}">38</td>
+                                <td>
+                                    <span class="badge badge-gender"
+                                        th:text="${res.gender != null and !res.gender.isEmpty() ? res.gender : 'Unspecified'}">Male</span>
+                                </td>
+                                <td style="text-align: right;">
+                                    <div class="table-actions" style="justify-content: flex-end;">
+                                        <button type="button" class="btn btn-secondary btn-sm" th:data-id="${res.id}"
+                                            th:data-name="${res.name}" th:data-village="${res.village}"
+                                            th:data-phone="${res.phone}" th:data-age="${res.age}"
+                                            th:data-gender="${res.gender}" onclick="openEditModal(this)">Edit</button>
+                                        <button type="button" class="btn btn-danger btn-sm" th:data-id="${res.id}"
+                                            th:data-name="${res.name}" onclick="confirmDelete(this)">Delete</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Empty State when table has no records -->
+                <div class="empty-state" id="emptyState" th:if="${residents == null or residents.isEmpty()}">
+                    <svg class="empty-state-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                    <h3>No Residents Registered Yet</h3>
+                    <p>Register your first village resident to start scheduling consultations, appointments, and
+                        medicine issuances.</p>
+                    <button type="button" class="btn btn-primary" onclick="openAddModal()">Register First
+                        Resident</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 
+     Register Resident Modal
+     -->
+    <div class="modal-overlay" id="addResidentModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 class="modal-title">Register Resident</h3>
+                <button type="button" class="modal-close" onclick="closeModal('addResidentModal')">&times;</button>
+            </div>
+            <form id="addResidentForm" onsubmit="handleAddResident(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label" for="addName">Full Name *</label>
+                        <input type="text" id="addName" class="form-control" placeholder="e.g. Ramesh Kumar" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="addVillage">Village *</label>
+                        <input type="text" id="addVillage" class="form-control" placeholder="e.g. Sundarpur" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="addPhone">Phone Number</label>
+                        <input type="tel" id="addPhone" class="form-control" placeholder="10-digit mobile number"
+                            pattern="^[0-9]{10}$" title="Phone must contain exactly 10 digits">
+                        <span class="form-hint">Must be 10 numeric digits if provided</span>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="addAge">Age</label>
+                            <input type="number" id="addAge" class="form-control" min="0" max="130"
+                                placeholder="e.g. 35">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="addGender">Gender</label>
+                            <select id="addGender" class="form-select">
+                                <option value="">Select Gender</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="addErrorMsg"
+                        style="color: var(--danger); font-size: 0.8rem; margin-top: 0.5rem; display: none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="closeModal('addResidentModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="addSubmitBtn">Save Resident</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 
+     Edit Resident Modal
+     -->
+    <div class="modal-overlay" id="editResidentModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 class="modal-title">Edit Resident</h3>
+                <button type="button" class="modal-close" onclick="closeModal('editResidentModal')">&times;</button>
+            </div>
+            <form id="editResidentForm" onsubmit="handleEditResident(event)">
+                <input type="hidden" id="editId">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label" for="editName">Full Name *</label>
+                        <input type="text" id="editName" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="editVillage">Village *</label>
+                        <input type="text" id="editVillage" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="editPhone">Phone Number</label>
+                        <input type="tel" id="editPhone" class="form-control" pattern="^[0-9]{10}$"
+                            title="Phone must contain exactly 10 digits">
+                        <span class="form-hint">Must be 10 numeric digits if provided</span>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="editAge">Age</label>
+                            <input type="number" id="editAge" class="form-control" min="0" max="130">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="editGender">Gender</label>
+                            <select id="editGender" class="form-select">
+                                <option value="">Select Gender</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="editErrorMsg"
+                        style="color: var(--danger); font-size: 0.8rem; margin-top: 0.5rem; display: none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="closeModal('editResidentModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="editSubmitBtn">Update Resident</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Layout Scripts -->
+    <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+
+    <script>
+        function openAddModal() {
+            document.getElementById('addResidentForm').reset();
+            document.getElementById('addErrorMsg').style.display = 'none';
+            document.getElementById('addResidentModal').classList.add('active');
+        }
+
+        function openEditModal(button) {
+            const id = button.getAttribute('data-id');
+            const name = button.getAttribute('data-name');
+            const village = button.getAttribute('data-village');
+            const phone = button.getAttribute('data-phone') || '';
+            const age = button.getAttribute('data-age') || '';
+            const gender = button.getAttribute('data-gender') || '';
+
+            document.getElementById('editId').value = id;
+            document.getElementById('editName').value = name;
+            document.getElementById('editVillage').value = village;
+            document.getElementById('editPhone').value = phone;
+            document.getElementById('editAge').value = age;
+            document.getElementById('editGender').value = gender;
+            document.getElementById('editErrorMsg').style.display = 'none';
+
+            document.getElementById('editResidentModal').classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        // Client-side search filtering
+        function filterResidents() {
+            const query = document.getElementById('residentSearch').value.toLowerCase();
+            const rows = document.querySelectorAll('#residentsTable tbody tr');
+            rows.forEach(row => {
+                const name = row.querySelector('.res-name').textContent.toLowerCase();
+                const village = row.querySelector('.res-village').textContent.toLowerCase();
+                const phone = row.querySelector('.res-phone').textContent.toLowerCase();
+                if (name.includes(query) || village.includes(query) || phone.includes(query)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // Handle Add Resident API submission
+        async function handleAddResident(event) {
+            event.preventDefault();
+            const submitBtn = document.getElementById('addSubmitBtn');
+            const errorDiv = document.getElementById('addErrorMsg');
+            errorDiv.style.display = 'none';
+
+            const resident = {
+                name: document.getElementById('addName').value.trim(),
+                village: document.getElementById('addVillage').value.trim(),
+                phone: document.getElementById('addPhone').value.trim() || null,
+                age: document.getElementById('addAge').value ? parseInt(document.getElementById('addAge').value) : null,
+                gender: document.getElementById('addGender').value || null
+            };
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Saving...';
+
+            try {
+                const response = await fetch('/api/residents', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(resident)
+                });
+
+                if (response.status === 201) {
+                    showToast('Resident registered successfully!', 'success');
+                    closeModal('addResidentModal');
+                    setTimeout(() => window.location.reload(), 400);
+                } else {
+                    const errorData = await response.json().catch(() => null);
+                    const msg = errorData?.message || errorData?.error || 'Validation failed. Check required fields.';
+                    errorDiv.textContent = msg;
+                    errorDiv.style.display = 'block';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Server communication error. Please try again.';
+                errorDiv.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Save Resident';
+            }
+        }
+
+        // Handle Edit Resident API submission
+        async function handleEditResident(event) {
+            event.preventDefault();
+            const id = document.getElementById('editId').value;
+            const submitBtn = document.getElementById('editSubmitBtn');
+            const errorDiv = document.getElementById('editErrorMsg');
+            errorDiv.style.display = 'none';
+
+            const resident = {
+                name: document.getElementById('editName').value.trim(),
+                village: document.getElementById('editVillage').value.trim(),
+                phone: document.getElementById('editPhone').value.trim() || null,
+                age: document.getElementById('editAge').value ? parseInt(document.getElementById('editAge').value) : null,
+                gender: document.getElementById('editGender').value || null
+            };
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Updating...';
+
+            try {
+                const response = await fetch('/api/residents/' + id, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(resident)
+                });
+
+                if (response.ok) {
+                    showToast('Resident updated successfully!', 'success');
+                    closeModal('editResidentModal');
+                    setTimeout(() => window.location.reload(), 400);
+                } else {
+                    const errorData = await response.json().catch(() => null);
+                    const msg = errorData?.message || errorData?.error || 'Update failed.';
+                    errorDiv.textContent = msg;
+                    errorDiv.style.display = 'block';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Server communication error. Please try again.';
+                errorDiv.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Update Resident';
+            }
+        }
+
+        // Handle Delete Resident
+        async function confirmDelete(button) {
+            const id = button.getAttribute('data-id');
+            const name = button.getAttribute('data-name');
+            if (!confirm('Are you sure you want to delete resident "' + name + '" (# ' + id + ')?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/residents/' + id, {
+                    method: 'DELETE'
+                });
+
+                if (response.status === 204 || response.ok) {
+                    showToast('Resident deleted successfully.', 'success');
+                    const row = document.getElementById('resident-row-' + id);
+                    if (row) row.remove();
+                    // If table has no rows left, reload to display empty state
+                    const remaining = document.querySelectorAll('#residentsTable tbody tr');
+                    if (remaining.length === 0) {
+                        setTimeout(() => window.location.reload(), 400);
+                    }
+                } else {
+                    showToast('Failed to delete resident.', 'error');
+                }
+            } catch (err) {
+                showToast('Error communicating with server.', 'error');
+            }
+        }
+    </script>
+
+</body>
+
+</html>

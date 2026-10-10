@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head('Dashboard')}"></head>
+<body>
+
+<div class="app-container">
+    <!-- Reusable Sidebar -->
+    <aside th:replace="~{fragments/layout :: sidebar('dashboard')}"></aside>
+
+    <!-- Main Content Area -->
+    <main class="app-main">
+        <header th:replace="~{fragments/layout :: header('Executive Overview', 'Community Health & Sanitation Management Portal')}"></header>
+
+        <div class="content-wrapper">
+            <!-- Welcome Banner -->
+            <section class="welcome-banner">
+                <div class="welcome-text">
+                    <h2>Welcome to Rural Health &amp; Sanitation</h2>
+                    <p>Coordinated administration platform for village healthcare centers, resident health records, medicine supply chains, and community environmental monitoring.</p>
+                </div>
+            </section>
+
+            <!-- Real Database Metric Cards -->
+            <div class="section-header">
+                <h3 class="section-title">Key Indicators</h3>
+            </div>
+
+            <div class="stats-grid">
+                <!-- Residents Card -->
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <span class="stat-card-title">Registered Residents</span>
+                        <div class="stat-card-icon icon-emerald">
+                            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                        </div>
+                    </div>
+                    <div class="stat-card-value" th:text="${residentCount}">0</div>
+                    <div class="stat-card-footer">
+                        <span>Database records</span>
+                        <a th:href="@{/residents}" class="stat-link">Manage &rarr;</a>
+                    </div>
+                </div>
+
+                <!-- Health Centres Card -->
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <span class="stat-card-title">Health Centres</span>
+                        <div class="stat-card-icon icon-teal">
+                            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                        </div>
+                    </div>
+                    <div class="stat-card-value" th:text="${healthCentreCount}">0</div>
+                    <div class="stat-card-footer">
+                        <span>Active facilities</span>
+                        <a th:href="@{/health-centres}" class="stat-link">View Centres &rarr;</a>
+                    </div>
+                </div>
+
+                <!-- Appointments Card -->
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <span class="stat-card-title">Appointments</span>
+                        <div class="stat-card-icon icon-blue">
+                            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        </div>
+                    </div>
+                    <div class="stat-card-value" th:text="${appointmentCount}">0</div>
+                    <div class="stat-card-footer">
+                        <span>Total scheduled</span>
+                        <a th:href="@{/appointments}" class="stat-link">Schedule &rarr;</a>
+                    </div>
+                </div>
+
+                <!-- Consultations Card -->
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <span class="stat-card-title">Consultations</span>
+                        <div class="stat-card-icon icon-purple">
+                            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        </div>
+                    </div>
+                    <div class="stat-card-value" th:text="${consultationCount}">0</div>
+                    <div class="stat-card-footer">
+                        <span>Medical diagnoses</span>
+                        <a th:href="@{/consultations}" class="stat-link">Consultations &rarr;</a>
+                    </div>
+                </div>
+
+                <!-- Medicine Inventory Card -->
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <span class="stat-card-title">Medicines Cataloged</span>
+                        <div class="stat-card-icon icon-emerald">
+                            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                        </div>
+                    </div>
+                    <div class="stat-card-value" th:text="${medicineCount}">0</div>
+                    <div class="stat-card-footer">
+                        <span>Inventory batches</span>
+                        <a th:href="@{/inventory}" class="stat-link">Stock &rarr;</a>
+                    </div>
+                </div>
+
+                <!-- Health Camps Card -->
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <span class="stat-card-title">Health Camps</span>
+                        <div class="stat-card-icon icon-teal">
+                            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                        </div>
+                    </div>
+                    <div class="stat-card-value" th:text="${healthCampCount}">0</div>
+                    <div class="stat-card-footer">
+                        <span>Community outreach</span>
+                        <a th:href="@{/health-camps}" class="stat-link">Camps &rarr;</a>
+                    </div>
+                </div>
+
+                <!-- Community Issues Card -->
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <span class="stat-card-title">Community Issues</span>
+                        <div class="stat-card-icon icon-rose">
+                            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                        </div>
+                    </div>
+                    <div class="stat-card-value" th:text="${issueCount}">0</div>
+                    <div class="stat-card-footer">
+                        <span>Tickets reported</span>
+                        <a th:href="@{/community-issues}" class="stat-link">Resolve &rarr;</a>
+                    </div>
+                </div>
+
+                <!-- Sanitation Facilities Card -->
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <span class="stat-card-title">Sanitation Facilities</span>
+                        <div class="stat-card-icon icon-amber">
+                            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                        </div>
+                    </div>
+                    <div class="stat-card-value" th:text="${sanitationCount}">0</div>
+                    <div class="stat-card-footer">
+                        <span>Village facilities</span>
+                        <a th:href="@{/sanitation}" class="stat-link">Facilities &rarr;</a>
+                    </div>
+                </div>
+
+                <!-- Water Quality Observations Card -->
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <span class="stat-card-title">Water Quality Tests</span>
+                        <div class="stat-card-icon icon-blue">
+                            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+                        </div>
+                    </div>
+                    <div class="stat-card-value" th:text="${waterQualityCount}">0</div>
+                    <div class="stat-card-footer">
+                        <span>Observations logged</span>
+                        <a th:href="@{/water-quality}" class="stat-link">Tests &rarr;</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Navigation Hub -->
+            <div class="section-header">
+                <h3 class="section-title">Quick Access</h3>
+            </div>
+
+            <div class="shortcuts-grid">
+                <a th:href="@{/residents}" class="shortcut-card">
+                    <div class="shortcut-top">
+                        <div class="shortcut-icon">
+                            <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                        </div>
+                        <div class="shortcut-info">
+                            <h3>Resident Directory</h3>
+                            <p>Register village residents, manage contact info, and track medical history references.</p>
+                        </div>
+                    </div>
+                    <div class="shortcut-footer">
+                        <span>Open</span>
+                        <span>&rarr;</span>
+                    </div>
+                </a>
+
+                <a th:href="@{/inventory}" class="shortcut-card">
+                    <div class="shortcut-top">
+                        <div class="shortcut-icon">
+                            <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                        </div>
+                        <div class="shortcut-info">
+                            <h3>Medicine Inventory</h3>
+                            <p>Monitor stock quantities, reorder thresholds, issue prescriptions, and handle replenishments.</p>
+                        </div>
+                    </div>
+                    <div class="shortcut-footer">
+                        <span>Open</span>
+                        <span>&rarr;</span>
+                    </div>
+                </a>
+
+                <a th:href="@{/community-issues}" class="shortcut-card">
+                    <div class="shortcut-top">
+                        <div class="shortcut-icon">
+                            <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                        </div>
+                        <div class="shortcut-info">
+                            <h3>Community Issues</h3>
+                            <p>Track sanitation and water issues with team assignments and status transitions.</p>
+                        </div>
+                    </div>
+                    <div class="shortcut-footer">
+                        <span>Open</span>
+                        <span>&rarr;</span>
+                    </div>
+                </a>
+
+                <a th:href="@{/water-quality}" class="shortcut-card">
+                    <div class="shortcut-top">
+                        <div class="shortcut-icon">
+                            <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+                        </div>
+                        <div class="shortcut-info">
+                            <h3>Water Quality Tests</h3>
+                            <p>Record observations from village wells, boreholes, and taps with PASS/FAIL criteria.</p>
+                        </div>
+                    </div>
+                    <div class="shortcut-footer">
+                        <span>Open</span>
+                        <span>&rarr;</span>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Layout Scripts -->
+<th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+
+</body>
+</html>

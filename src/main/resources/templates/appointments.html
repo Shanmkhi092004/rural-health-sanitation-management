@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+
+<head th:replace="~{fragments/layout :: head('Appointments')}"></head>
+
+<body>
+
+    <div class="app-container">
+        <!-- Reusable Sidebar -->
+        <aside th:replace="~{fragments/layout :: sidebar('appointments')}"></aside>
+
+
+        <main class="app-main">
+            <header
+                th:replace="~{fragments/layout :: header('Appointments', 'Clinical Consultations & Specialist Visits')}">
+            </header>
+
+            <div class="content-wrapper">
+                <!-- Page Toolbar -->
+                <div class="page-toolbar">
+                    <div class="search-box">
+                        <svg class="search-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <input type="text" id="appointmentSearch" placeholder="Search by resident, centre, reason..."
+                            onkeyup="filterAppointments()">
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-primary" onclick="openAddModal()">
+                            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 4v16m8-8H4" />
+                            </svg>
+                            Schedule Appointment
+                        </button>
+                    </div>
+                </div>
+
+
+                <div class="filter-pills" style="margin-bottom: 1.25rem;">
+                    <button type="button" class="filter-pill active" onclick="setStatusFilter('ALL', this)">All
+                        Appointments</button>
+                    <button type="button" class="filter-pill"
+                        onclick="setStatusFilter('SCHEDULED', this)">Scheduled</button>
+                    <button type="button" class="filter-pill"
+                        onclick="setStatusFilter('COMPLETED', this)">Completed</button>
+                    <button type="button" class="filter-pill"
+                        onclick="setStatusFilter('CANCELLED', this)">Cancelled</button>
+                </div>
+
+                <!-- Appointments Table -->
+                <div class="table-container" th:if="${appointments != null and !appointments.isEmpty()}">
+                    <table class="data-table" id="appointmentsTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 70px;">ID</th>
+                                <th>Resident</th>
+                                <th>Health Centre</th>
+                                <th>Appointment Date &amp; Time</th>
+                                <th>Reason</th>
+                                <th>Status</th>
+                                <th style="text-align: right; width: 150px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="apt : ${appointments}" th:id="'appointment-row-' + ${apt.id}"
+                                th:data-status="${apt.status}">
+                                <td class="apt-id" th:text="'#' + ${apt.id}">#1</td>
+                                <td class="apt-resident">
+                                    <span style="font-weight: 600;" th:text="'Resident #' + ${apt.residentId}">Resident
+                                        #1</span>
+                                </td>
+                                <td class="apt-centre">
+                                    <span th:text="'Centre #' + ${apt.healthCentreId}">Centre #1</span>
+                                </td>
+                                <td class="apt-date"
+                                    th:text="${#temporals.format(apt.appointmentDate, 'dd MMM yyyy, hh:mm a')}">12 Oct
+                                    2026, 10:30 AM</td>
+                                <td class="apt-reason" th:text="${apt.reason}">Maternal health routine checkup</td>
+                                <td class="apt-status">
+                                    <span class="badge"
+                                        th:classappend="${apt.status == 'COMPLETED' ? 'badge-success' : (apt.status == 'CANCELLED' ? 'badge-danger' : 'badge-info')}"
+                                        th:text="${apt.status}">SCHEDULED</span>
+                                </td>
+                                <td style="text-align: right;">
+                                    <div class="table-actions" style="justify-content: flex-end;">
+                                        <button type="button" class="btn btn-secondary btn-sm" th:data-id="${apt.id}"
+                                            th:data-resident-id="${apt.residentId}"
+                                            th:data-centre-id="${apt.healthCentreId}"
+                                            th:data-date="${apt.appointmentDate}" th:data-reason="${apt.reason}"
+                                            th:data-status="${apt.status}" onclick="openEditModal(this)">Edit</button>
+                                        <button type="button" class="btn btn-danger btn-sm" th:data-id="${apt.id}"
+                                            onclick="confirmDelete(this)">Cancel</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Empty State when table has no records -->
+                <div class="empty-state" id="emptyState" th:if="${appointments == null or appointments.isEmpty()}">
+                    <svg class="empty-state-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <h3>No Appointments Scheduled</h3>
+                    <p>Schedule medical consultations between registered village residents and primary health clinics.
+                    </p>
+                    <button type="button" class="btn btn-primary" onclick="openAddModal()">Schedule First
+                        Appointment</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 
+     Schedule Appointment Modal
+      -->
+    <div class="modal-overlay" id="addAppointmentModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 class="modal-title">Schedule Appointment</h3>
+                <button type="button" class="modal-close" onclick="closeModal('addAppointmentModal')">&times;</button>
+            </div>
+            <form id="addAppointmentForm" onsubmit="handleAddAppointment(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label" for="addResidentId">Resident *</label>
+                        <select id="addResidentId" class="form-select" required>
+                            <option value="">Select Resident</option>
+                            <option th:each="res : ${residents}" th:value="${res.id}"
+                                th:text="${res.name + ' (' + res.village + ' - #' + res.id + ')'}">Ramesh Kumar
+                                (Sundarpur)</option>
+                        </select>
+                        <span class="form-hint" th:if="${residents == null or residents.isEmpty()}">
+                            No residents available. <a th:href="@{/residents}"
+                                style="color: var(--primary-700);">Register a resident first</a>.
+                        </span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="addHealthCentreId">Health Centre *</label>
+                        <select id="addHealthCentreId" class="form-select" required>
+                            <option value="">Select Health Centre</option>
+                            <option th:each="centre : ${healthCentres}" th:value="${centre.id}"
+                                th:text="${centre.name + ' (' + centre.village + ' - #' + centre.id + ')'}">Sundarpur
+                                Sub-Centre</option>
+                        </select>
+                        <span class="form-hint" th:if="${healthCentres == null or healthCentres.isEmpty()}">
+                            No centres available. <a th:href="@{/health-centres}"
+                                style="color: var(--primary-700);">Register a centre first</a>.
+                        </span>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="addAppointmentDate">Date &amp; Time *</label>
+                            <input type="datetime-local" id="addAppointmentDate" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="addStatus">Status</label>
+                            <select id="addStatus" class="form-select">
+                                <option value="SCHEDULED">SCHEDULED</option>
+                                <option value="COMPLETED">COMPLETED</option>
+                                <option value="CANCELLED">CANCELLED</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="addReason">Reason for Appointment *</label>
+                        <input type="text" id="addReason" class="form-control"
+                            placeholder="e.g. Fever checkup, blood pressure follow-up" required>
+                    </div>
+
+                    <div id="addErrorMsg"
+                        style="color: var(--danger); font-size: 0.8rem; margin-top: 0.5rem; display: none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="closeModal('addAppointmentModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="addSubmitBtn">Confirm Appointment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!--
+     Edit Appointment Modal
+      -->
+    <div class="modal-overlay" id="editAppointmentModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3 class="modal-title">Edit Appointment</h3>
+                <button type="button" class="modal-close" onclick="closeModal('editAppointmentModal')">&times;</button>
+            </div>
+            <form id="editAppointmentForm" onsubmit="handleEditAppointment(event)">
+                <input type="hidden" id="editId">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label" for="editResidentId">Resident *</label>
+                        <select id="editResidentId" class="form-select" required>
+                            <option value="">Select Resident</option>
+                            <option th:each="res : ${residents}" th:value="${res.id}"
+                                th:text="${res.name + ' (' + res.village + ' - #' + res.id + ')'}">Ramesh Kumar
+                                (Sundarpur)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="editHealthCentreId">Health Centre *</label>
+                        <select id="editHealthCentreId" class="form-select" required>
+                            <option value="">Select Health Centre</option>
+                            <option th:each="centre : ${healthCentres}" th:value="${centre.id}"
+                                th:text="${centre.name + ' (' + centre.village + ' - #' + centre.id + ')'}">Sundarpur
+                                Sub-Centre</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="editAppointmentDate">Date &amp; Time *</label>
+                            <input type="datetime-local" id="editAppointmentDate" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="editStatus">Status</label>
+                            <select id="editStatus" class="form-select">
+                                <option value="SCHEDULED">SCHEDULED</option>
+                                <option value="COMPLETED">COMPLETED</option>
+                                <option value="CANCELLED">CANCELLED</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="editReason">Reason *</label>
+                        <input type="text" id="editReason" class="form-control" required>
+                    </div>
+
+                    <div id="editErrorMsg"
+                        style="color: var(--danger); font-size: 0.8rem; margin-top: 0.5rem; display: none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="closeModal('editAppointmentModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="editSubmitBtn">Update Appointment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Layout Scripts -->
+    <th:block th:replace="~{fragments/layout :: scripts}"></th:block>
+
+    <script>
+        let currentStatusFilter = 'ALL';
+
+        function openAddModal() {
+            document.getElementById('addAppointmentForm').reset();
+            document.getElementById('addErrorMsg').style.display = 'none';
+            document.getElementById('addAppointmentModal').classList.add('active');
+        }
+
+        function openEditModal(button) {
+            const id = button.getAttribute('data-id');
+            const residentId = button.getAttribute('data-resident-id');
+            const centreId = button.getAttribute('data-centre-id');
+            const rawDate = button.getAttribute('data-date');
+            const reason = button.getAttribute('data-reason');
+            const status = button.getAttribute('data-status');
+
+            document.getElementById('editId').value = id;
+            document.getElementById('editResidentId').value = residentId;
+            document.getElementById('editHealthCentreId').value = centreId;
+
+            if (rawDate) {
+                document.getElementById('editAppointmentDate').value = rawDate.substring(0, 16);
+            }
+            document.getElementById('editReason').value = reason;
+            document.getElementById('editStatus').value = status;
+            document.getElementById('editErrorMsg').style.display = 'none';
+
+            document.getElementById('editAppointmentModal').classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function setStatusFilter(status, button) {
+            currentStatusFilter = status;
+            document.querySelectorAll('.filter-pill').forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            filterAppointments();
+        }
+
+        function filterAppointments() {
+            const query = document.getElementById('appointmentSearch').value.toLowerCase();
+            const rows = document.querySelectorAll('#appointmentsTable tbody tr');
+
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                const rowStatus = row.getAttribute('data-status');
+
+                const matchesQuery = text.includes(query);
+                const matchesStatus = (currentStatusFilter === 'ALL' || rowStatus === currentStatusFilter);
+
+                if (matchesQuery && matchesStatus) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // Handle Add Appointment API submission
+        async function handleAddAppointment(event) {
+            event.preventDefault();
+            const submitBtn = document.getElementById('addSubmitBtn');
+            const errorDiv = document.getElementById('addErrorMsg');
+            errorDiv.style.display = 'none';
+
+            const rawDate = document.getElementById('addAppointmentDate').value;
+            const appointment = {
+                residentId: parseInt(document.getElementById('addResidentId').value),
+                healthCentreId: parseInt(document.getElementById('addHealthCentreId').value),
+                appointmentDate: rawDate ? rawDate + ':00' : null,
+                reason: document.getElementById('addReason').value.trim(),
+                status: document.getElementById('addStatus').value
+            };
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Scheduling...';
+
+            try {
+                const response = await fetch('/api/appointments', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(appointment)
+                });
+
+                if (response.status === 201) {
+                    showToast('Appointment scheduled successfully!', 'success');
+                    closeModal('addAppointmentModal');
+                    setTimeout(() => window.location.reload(), 400);
+                } else {
+                    const errorData = await response.json().catch(() => null);
+                    const msg = errorData?.message || errorData?.error || 'Failed to schedule appointment.';
+                    errorDiv.textContent = msg;
+                    errorDiv.style.display = 'block';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Server communication error. Please try again.';
+                errorDiv.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Confirm Appointment';
+            }
+        }
+
+        // Handle Edit Appointment API submission
+        async function handleEditAppointment(event) {
+            event.preventDefault();
+            const id = document.getElementById('editId').value;
+            const submitBtn = document.getElementById('editSubmitBtn');
+            const errorDiv = document.getElementById('editErrorMsg');
+            errorDiv.style.display = 'none';
+
+            const rawDate = document.getElementById('editAppointmentDate').value;
+            const appointment = {
+                residentId: parseInt(document.getElementById('editResidentId').value),
+                healthCentreId: parseInt(document.getElementById('editHealthCentreId').value),
+                appointmentDate: rawDate.length === 16 ? rawDate + ':00' : rawDate,
+                reason: document.getElementById('editReason').value.trim(),
+                status: document.getElementById('editStatus').value
+            };
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Updating...';
+
+            try {
+                const response = await fetch('/api/appointments/' + id, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(appointment)
+                });
+
+                if (response.ok) {
+                    showToast('Appointment updated successfully!', 'success');
+                    closeModal('editAppointmentModal');
+                    setTimeout(() => window.location.reload(), 400);
+                } else {
+                    const errorData = await response.json().catch(() => null);
+                    const msg = errorData?.message || errorData?.error || 'Update failed.';
+                    errorDiv.textContent = msg;
+                    errorDiv.style.display = 'block';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Server communication error. Please try again.';
+                errorDiv.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Update Appointment';
+            }
+        }
+
+        // Handle Delete Appointment
+        async function confirmDelete(button) {
+            const id = button.getAttribute('data-id');
+            if (!confirm('Are you sure you want to cancel and remove appointment #' + id + '?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/appointments/' + id, {
+                    method: 'DELETE'
+                });
+
+                if (response.status === 204 || response.ok) {
+                    showToast('Appointment cancelled successfully.', 'success');
+                    const row = document.getElementById('appointment-row-' + id);
+                    if (row) row.remove();
+                    const remaining = document.querySelectorAll('#appointmentsTable tbody tr');
+                    if (remaining.length === 0) {
+                        setTimeout(() => window.location.reload(), 400);
+                    }
+                } else {
+                    showToast('Failed to cancel appointment.', 'error');
+                }
+            } catch (err) {
+                showToast('Error communicating with server.', 'error');
+            }
+        }
+    </script>
+
+</body>
+
+</html>
