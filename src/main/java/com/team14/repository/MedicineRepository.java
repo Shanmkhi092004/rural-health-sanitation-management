@@ -1,10 +1,10 @@
 
-package com.team14.repository;
+package com.Team14.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import com.team14.entity.Medicine;
+import com.Team14.entity.Medicine;
 
 import java.util.List;
 

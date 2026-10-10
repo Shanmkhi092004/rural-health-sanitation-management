@@ -1,5 +1,5 @@
 
-package com.team14.entity;
+package com.Team14.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;

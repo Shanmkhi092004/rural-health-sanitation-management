@@ -1,5 +1,5 @@
 
-package com.team14.dto;
+package com.Team14.dto;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
