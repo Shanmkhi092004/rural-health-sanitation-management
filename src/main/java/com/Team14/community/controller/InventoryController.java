@@ -1,5 +1,5 @@
 
-package com.Team14.controller;
+package com.Team14.community.controller;
 
 import jakarta.validation.Valid;
 
@@ -7,13 +7,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import com.Team14.dto.MedicineIssueRequest;
-import com.Team14.dto.ReplenishmentRequestDto;
-import com.Team14.entity.Medicine;
-import com.Team14.entity.MedicineIssue;
-import com.Team14.entity.ReplenishmentRequest;
-import com.Team14.entity.ReplenishmentRequest.ReplenishmentStatus;
-import com.Team14.service.InventoryService;
+import com.Team14.community.dto.MedicineIssueRequest;
+import com.Team14.community.dto.ReplenishmentRequestDto;
+import com.Team14.community.entity.Medicine;
+import com.Team14.community.entity.MedicineIssue;
+import com.Team14.community.entity.ReplenishmentRequest;
+import com.Team14.community.entity.ReplenishmentRequest.ReplenishmentStatus;
+import com.Team14.community.service.InventoryService;
 
 import java.util.List;
 

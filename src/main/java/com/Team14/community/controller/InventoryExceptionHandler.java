@@ -1,5 +1,5 @@
 
-package com.Team14.controller;
+package com.Team14.community.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
